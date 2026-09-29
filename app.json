@@ -17,10 +17,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.bharunesh.agrisyncv2",
+      "versionCode": 3
     },
     "web": {
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -32,11 +34,32 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow AgriSync to access your microphone for Voice AI queries."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AgriSync to access your photos for crop disease scanning."
+        }
+      ],
+      "expo-sharing",
+      "expo-image",
+      "expo-secure-store",
+      "expo-web-browser"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7e5401d4-a196-40cb-8c21-659afcbaf12c"
+      }
     }
   }
 }
