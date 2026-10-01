@@ -1,0 +1,9 @@
+{
+  "appId": "com.agrisync.app",
+  "appName": "AgriSync",
+  "webDir": "dist",
+  "server": {
+    "url": "https://agrisync1124.vercel.app",
+    "cleartext": true
+  }
+}
