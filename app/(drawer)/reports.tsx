@@ -829,8 +829,8 @@ export default function SmartDigitalLedgerScreen() {
 
         {/* 📊 STACKED BAR CHART: DYNAMIC FARM ACTIVITY HISTORY */}
         <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+          <View style={{ flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: '#DCFCE7', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
                 <BarChart2 color="#16A34A" size={18} />
               </View>
@@ -843,9 +843,9 @@ export default function SmartDigitalLedgerScreen() {
             {/* Interactive Activity View Filter Dropdown */}
             <TouchableOpacity
               onPress={() => setShowChartDropdownModal(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, alignSelf: 'flex-start' }}
             >
-              <Text style={{ fontSize: 11, fontFamily: 'Inter_600SemiBold', color: '#374151', marginRight: 4 }}>
+              <Text style={{ fontSize: 11, fontFamily: 'Inter_600SemiBold', color: '#374151', marginRight: 6 }}>
                 {selectedSubCategory === 'All Activities'
                   ? (isTa ? 'அனைத்து பண்ணை நடவடிக்கைகள்' : 'All Farm Activities')
                   : (isTa

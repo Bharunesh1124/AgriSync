@@ -838,127 +838,147 @@ Return strictly JSON data matching exactly this schema, without markdown formatt
       });
     }
 
+    const isTa = i18n.language === "ta";
+
     if (cropType === "Wheat") {
       return [
         {
-          threat: "Leaf Rust Outbreak",
+          threat: isTa ? "இலை துரு நோய் பரவல்" : "Leaf Rust Outbreak",
           severity: "Medium",
-          desc: `Conditions are optimal for rust in the window of ${getDynamicDateRange(7)}.`,
+          desc: isTa
+            ? `அடுத்த 7 நாட்களில் துரு நோய் பரவ உகந்த வானிலை நிலவுகிறது.`
+            : `Conditions are optimal for rust in the window of ${getDynamicDateRange(7)}.`,
           icon: Bug,
           color: "#f59e0b",
           exposurePerAcre: 3200,
-          actionPlan:
-            "Foliar application of Tebuconazole 250 EC @ 1ml/L water during early morning. Inspect lower leaves daily for orange pustules and avoid excessive nitrogen dosing.",
+          actionPlan: isTa
+            ? "அதிகாலை வேளையில் டெபுகோனசோல் (Tebuconazole 250 EC @ 1ml/L) தெளிக்கவும். இலைகளின் அடிப்புறத்தை தினமும் பரிசோதிக்கவும்."
+            : "Foliar application of Tebuconazole 250 EC @ 1ml/L water during early morning. Inspect lower leaves daily for orange pustules and avoid excessive nitrogen dosing.",
           mitigationTask: {
-            name: "Leaf Rust Fungicide Spray",
+            name: isTa ? "துரு நோய் பூஞ்சை நாசினி தெளிப்பு" : "Leaf Rust Fungicide Spray",
             type: "Pesticide",
             intervalDays: 2,
             estimatedCost: "₹1,800",
-            resources: "Tebuconazole 250 EC (500ml) + Sprayer",
+            resources: isTa ? "டெபுகோனசோல் 250 EC (500ml) + தெளிப்பான்" : "Tebuconazole 250 EC (500ml) + Sprayer",
           },
-          timeWindow: `By ${getDynamicTargetDate(48)}`,
-          dateTag: `Active Window: ${getDynamicDateRange(7)}`,
+          timeWindow: isTa ? `கெடு: ${getDynamicTargetDate(48)} க்குள்` : `By ${getDynamicTargetDate(48)}`,
+          dateTag: isTa ? `செயலில் உள்ள காலம்: ${getDynamicDateRange(7)}` : `Active Window: ${getDynamicDateRange(7)}`,
         },
         {
-          threat: "Late Frost",
+          threat: isTa ? "பிந்தைய பனி உறைவு" : "Late Frost",
           severity: "Low",
-          desc: `Minimal risk of frost damage for ${getDynamicDateRange(5)}.`,
+          desc: isTa
+            ? `அடுத்த 5 நாட்களில் பனிச்சேத ஆபத்து மிகக் குறைவு.`
+            : `Minimal risk of frost damage for ${getDynamicDateRange(5)}.`,
           icon: ThermometerSun,
           color: "#10b981",
           exposurePerAcre: 1500,
-          actionPlan:
-            "Apply light evening irrigation to elevate crop canopy temperature. Maintain optimal soil moisture to mitigate nocturnal radiation frost.",
+          actionPlan: isTa
+            ? "பயிர் வெப்பநிலையை உயர்த்த மாலையில் லேசான பாசனம் செய்யவும். மண் ஈரப்பதத்தை சீராக பராமரிக்கவும்."
+            : "Apply light evening irrigation to elevate crop canopy temperature. Maintain optimal soil moisture to mitigate nocturnal radiation frost.",
           mitigationTask: {
-            name: "Thermal Soil Moisture Run",
+            name: isTa ? "வெப்பநிலையை உயர்த்துவதற்கான பாசனம்" : "Thermal Soil Moisture Run",
             type: "Irrigation",
             intervalDays: 3,
             estimatedCost: "₹600",
-            resources: "Ground Water Irrigation Pump",
+            resources: isTa ? "நிலத்தடி நீர் பாசன பம்ப்" : "Ground Water Irrigation Pump",
           },
-          timeWindow: `By ${getDynamicTargetDate(96)}`,
-          dateTag: `Active Window: ${getDynamicDateRange(5)}`,
+          timeWindow: isTa ? `கெடு: ${getDynamicTargetDate(96)} க்குள்` : `By ${getDynamicTargetDate(96)}`,
+          dateTag: isTa ? `செயலில் உள்ள காலம்: ${getDynamicDateRange(5)}` : `Active Window: ${getDynamicDateRange(5)}`,
         },
       ];
     } else if (cropType === "Corn") {
       return [
         {
-          threat: "Water Stress / Drought",
+          threat: isTa ? "நீர் பற்றாக்குறை / வறட்சி" : "Water Stress / Drought",
           severity: "High",
-          desc: `Rainfall is 40% below average for ${getDynamicDateRange(7)}. Immediate irrigation required.`,
+          desc: isTa
+            ? `மழைப்பொழிவு 40% குறைந்துள்ளது. உடனடியாக பாசனம் தேவை.`
+            : `Rainfall is 40% below average for ${getDynamicDateRange(7)}. Immediate irrigation required.`,
           icon: Droplet,
           color: "#ef4444",
           exposurePerAcre: 5500,
-          actionPlan:
-            "Initiate drip/furrow irrigation immediately with 25mm water depth. Apply potassium nitrate (13-0-45) @ 1% foliar spray to strengthen leaf turgor and reduce transpiration loss.",
+          actionPlan: isTa
+            ? "உடனடியாக சொட்டுநீர்/வாய்க்கால் பாசனம் செய்யவும். இலை நீர் இழப்பைத் தடுக்க 1% பொட்டாசியம் நைட்ரேட் தெளிக்கவும்."
+            : "Initiate drip/furrow irrigation immediately with 25mm water depth. Apply potassium nitrate (13-0-45) @ 1% foliar spray to strengthen leaf turgor and reduce transpiration loss.",
           mitigationTask: {
-            name: "Emergency Drought Irrigation & Anti-transpirant",
+            name: isTa ? "அவசர வறட்சி பாசனம் & இலை தெளிப்பு" : "Emergency Drought Irrigation & Anti-transpirant",
             type: "Irrigation",
             intervalDays: 1,
             estimatedCost: "₹2,500",
-            resources: "25,000L Water Supply + KNO3 Chemical",
+            resources: isTa ? "25,000L நீர் விநியோகம் + KNO3 உரம்" : "25,000L Water Supply + KNO3 Chemical",
           },
-          timeWindow: `Immediate (By ${getDynamicTargetDate(24)})`,
-          dateTag: `Active Window: ${getDynamicDateRange(7)}`,
+          timeWindow: isTa ? `உடனடியாக (${getDynamicTargetDate(24)} க்குள்)` : `Immediate (By ${getDynamicTargetDate(24)})`,
+          dateTag: isTa ? `செயலில் உள்ள காலம்: ${getDynamicDateRange(7)}` : `Active Window: ${getDynamicDateRange(7)}`,
         },
         {
-          threat: "Fall Armyworm",
+          threat: isTa ? "படைப்புழு தாக்குதல்" : "Fall Armyworm",
           severity: "Medium",
-          desc: `Outbreaks reported in neighboring districts for ${getDynamicDateRange(7)}.`,
+          desc: isTa
+            ? `அண்டை மாவட்டங்களில் படைப்புழு பரவல் கண்டறியப்பட்டுள்ளது.`
+            : `Outbreaks reported in neighboring districts for ${getDynamicDateRange(7)}.`,
           icon: Bug,
           color: "#f59e0b",
           exposurePerAcre: 3800,
-          actionPlan:
-            "Deploy 5 pheromone traps per acre. Apply Chlorantraniliprole 18.5% SC into crop whorls upon detecting early leaf scraping or frass.",
+          actionPlan: isTa
+            ? "ஏக்கருக்கு 5 இனக்கவர்ச்சி பொறிகளை வைக்கவும். புழுக்கள் கண்டறியப்பட்டால் குளோராண்ட்ரானிலிப்ரோல் தெளிக்கவும்."
+            : "Deploy 5 pheromone traps per acre. Apply Chlorantraniliprole 18.5% SC into crop whorls upon detecting early leaf scraping or frass.",
           mitigationTask: {
-            name: "Fall Armyworm Trap & Whorl Application",
+            name: isTa ? "படைப்புழு பொறி & மருந்து தெளிப்பு" : "Fall Armyworm Trap & Whorl Application",
             type: "Pesticide",
             intervalDays: 2,
             estimatedCost: "₹2,100",
-            resources: "Chlorantraniliprole + 5 Pheromone Traps",
+            resources: isTa ? "குளோராண்ட்ரானிலிப்ரோல் + 5 இனக்கவர்ச்சி பொறிகள்" : "Chlorantraniliprole + 5 Pheromone Traps",
           },
-          timeWindow: `By ${getDynamicTargetDate(72)}`,
-          dateTag: `Active Window: ${getDynamicDateRange(7)}`,
+          timeWindow: isTa ? `கெடு: ${getDynamicTargetDate(72)} க்குள்` : `By ${getDynamicTargetDate(72)}`,
+          dateTag: isTa ? `செயலில் உள்ள காலம்: ${getDynamicDateRange(7)}` : `Active Window: ${getDynamicDateRange(7)}`,
         },
       ];
     } else {
       return [
         {
-          threat: "Flooding / Waterlogging",
+          threat: isTa ? "வெள்ளப்பெருக்கு / நீர் தேக்கம்" : "Flooding / Waterlogging",
           severity: "High",
-          desc: `Heavy monsoon rains expected during ${getDynamicDateRange(5)}. Drainage critical.`,
+          desc: isTa
+            ? `அடுத்த 5 நாட்களில் கனமழை வாய்ப்பு. வடிகால் வசதி அவசியம்.`
+            : `Heavy monsoon rains expected during ${getDynamicDateRange(5)}. Drainage critical.`,
           icon: CloudRain,
           color: "#ef4444",
           exposurePerAcre: 6000,
-          actionPlan:
-            "Clear field bund channels and peripheral trenches immediately for unhindered surface water drainage. Apply foliar zinc sulfate + urea spray post-drainage to boost root recovery.",
+          actionPlan: isTa
+            ? "வயல் வடிகால் வாய்க்கால்களை உடனடியாக சீரமைக்கவும். நீர் வடிந்த பிறகு ஜிங்க் சல்பேட் + யுரியா தெளிக்கவும்."
+            : "Clear field bund channels and peripheral trenches immediately for unhindered surface water drainage. Apply foliar zinc sulfate + urea spray post-drainage to boost root recovery.",
           mitigationTask: {
-            name: "Drainage Channel Clearing & Micronutrient Boost",
+            name: isTa ? "வடிகால் சீரமைப்பு & துத்தநாக சத்து தெளிப்பு" : "Drainage Channel Clearing & Micronutrient Boost",
             type: "Irrigation",
             intervalDays: 1,
             estimatedCost: "₹1,200",
-            resources: "Labor Drainage Clearance + Zinc Sulfate Spray",
+            resources: isTa ? "வடிகால் ஆட்கள் + ஜிங்க் சல்பேட் மருந்து" : "Labor Drainage Clearance + Zinc Sulfate Spray",
           },
-          timeWindow: `Immediate (By ${getDynamicTargetDate(24)})`,
-          dateTag: `Active Window: ${getDynamicDateRange(5)}`,
+          timeWindow: isTa ? `உடனடியாக (${getDynamicTargetDate(24)} க்குள்)` : `Immediate (By ${getDynamicTargetDate(24)})`,
+          dateTag: isTa ? `செயலில் உள்ள காலம்: ${getDynamicDateRange(5)}` : `Active Window: ${getDynamicDateRange(5)}`,
         },
         {
-          threat: "Brown Plant Hopper",
+          threat: isTa ? "புகையான் / பழுப்பு தட்டான்" : "Brown Plant Hopper",
           severity: "Low",
-          desc: `Pest activity is minimal currently for ${getDynamicDateRange(7)}.`,
+          desc: isTa
+            ? `தற்போது பூச்சி ஆபத்து குறைவாக உள்ளது.`
+            : `Pest activity is minimal currently for ${getDynamicDateRange(7)}.`,
           icon: Bug,
           color: "#10b981",
           exposurePerAcre: 1800,
-          actionPlan:
-            "Execute Alternate Wetting and Drying (AWD) water management. Keep lower canopy open to sunlight and avoid over-dosing nitrogenous fertilizers.",
+          actionPlan: isTa
+            ? "மாற்று முறையில் நீர் கட்டுதல் மற்றும் காயவைத்தல் முறையை பயன்படுத்தவும். நைட்ரஜன் உரங்களை அதிகமாக இட வேண்டாம்."
+            : "Execute Alternate Wetting and Drying (AWD) water management. Keep lower canopy open to sunlight and avoid over-dosing nitrogenous fertilizers.",
           mitigationTask: {
-            name: "AWD Water Level Adjustment & Canopy Inspection",
+            name: isTa ? "AWD நீர் மேலாண்மை & கள ஆய்வு" : "AWD Water Level Adjustment & Canopy Inspection",
             type: "Irrigation",
             intervalDays: 4,
             estimatedCost: "₹500",
-            resources: "Field Water Perforated Pipes",
+            resources: isTa ? "துளையிடப்பட்ட நீர் குழாய்கள்" : "Field Water Perforated Pipes",
           },
-          timeWindow: `By ${getDynamicTargetDate(120)}`,
-          dateTag: `Active Window: ${getDynamicDateRange(7)}`,
+          timeWindow: isTa ? `கெடு: ${getDynamicTargetDate(120)} க்குள்` : `By ${getDynamicTargetDate(120)}`,
+          dateTag: isTa ? `செயலில் உள்ள காலம்: ${getDynamicDateRange(7)}` : `Active Window: ${getDynamicDateRange(7)}`,
         },
       ];
     }

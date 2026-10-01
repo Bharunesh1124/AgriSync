@@ -60,6 +60,13 @@ const resources = {
       "ai_symptom_checker": "AI Symptom Checker",
       "select_symptoms": "Select symptoms observed in the",
       "analyze_symptoms": "Analyze Symptoms",
+      "Fever": "Fever",
+      "Limping": "Limping",
+      "Blisters on Mouth": "Blisters on Mouth",
+      "Lethargy": "Lethargy",
+      "Coughing": "Coughing",
+      "Loss of Appetite": "Loss of Appetite",
+      "Diarrhea": "Diarrhea",
       
       // Crops (crops.tsx)
       "crop_management": "Crop Management",
@@ -220,6 +227,13 @@ const resources = {
       "ai_symptom_checker": "AI அறிகுறி சரிபார்ப்பான்",
       "select_symptoms": "இதில் காணப்பட்ட அறிகுறிகளைத் தேர்ந்தெடுக்கவும்",
       "analyze_symptoms": "அறிகுறிகளை பகுப்பாய்வு செய்",
+      "Fever": "காய்ச்சல்",
+      "Limping": "நொண்டி நடப்பது",
+      "Blisters on Mouth": "வாயில் கொப்புளங்கள்",
+      "Lethargy": "சோர்வு",
+      "Coughing": "இருமல்",
+      "Loss of Appetite": "பசியின்மை",
+      "Diarrhea": "வயிற்றுப்போக்கு",
       
       // Crops (crops.tsx)
       "crop_management": "பயிர் மேலாண்மை",

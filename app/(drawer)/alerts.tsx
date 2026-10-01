@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react-native";
 import * as Speech from "expo-speech";
+import * as Print from "expo-print";
 import { GlassCard } from "../../src/components/GlassCard";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { supabase } from "../../src/lib/supabase";
@@ -437,18 +438,11 @@ export default function AlertsScreen() {
   };
 
   const generateDetailedPDF = async (alert: AlertData) => {
-    if (Platform.OS !== "web") {
-      Alert.alert(
-        "Coming Soon",
-        "PDF Export will be available in the next mobile update!",
-      );
-      return;
-    }
-
     setGeneratingPdfId(alert.id);
     const isTamil = i18n.language === "ta";
 
     try {
+      let finalHtml = "";
       const keysPool = getGeminiKeysPool();
       const languageInstruction = isTamil
         ? "MANDATORY: The entire report MUST be written in Tamil (தமிழ்)."
@@ -477,40 +471,41 @@ export default function AlertsScreen() {
             );
             const aiData = await aiRes.json();
             if (aiData.candidates?.[0]?.content?.parts?.[0]?.text) {
-              let htmlContent = aiData.candidates[0].content.parts[0].text
+              finalHtml = aiData.candidates[0].content.parts[0].text
                 .replace(/```html/g, "")
                 .replace(/```/g, "")
                 .trim();
-              setPreviewHtml(htmlContent);
-              return;
+              break;
             }
           } catch (e) {
             console.warn(`Model ${model} failover...`, e);
           }
         }
+        if (finalHtml) break;
       }
 
-      // Guaranteed Local Fallback Report if keys hit rate limits
-      setPreviewHtml(generateLocalPDFHtml(alert, isTamil));
+      if (!finalHtml) {
+        finalHtml = generateLocalPDFHtml(alert, isTamil);
+      }
+
+      setPreviewHtml(finalHtml);
+      await Print.printAsync({ html: finalHtml });
     } catch (e) {
       console.warn("Generating local fallback PDF report", e);
-      setPreviewHtml(generateLocalPDFHtml(alert, isTamil));
+      const fallbackHtml = generateLocalPDFHtml(alert, isTamil);
+      setPreviewHtml(fallbackHtml);
+      await Print.printAsync({ html: fallbackHtml });
     } finally {
       setGeneratingPdfId(null);
     }
   };
 
-  const handlePrintPdf = () => {
+  const handlePrintPdf = async () => {
     if (!previewHtml) return;
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(previewHtml);
-      printWindow.document.close();
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-    } else {
-      window.alert("Please allow popups to print the PDF.");
+    try {
+      await Print.printAsync({ html: previewHtml });
+    } catch (e) {
+      console.error("Print error:", e);
     }
   };
 
@@ -966,58 +961,56 @@ export default function AlertsScreen() {
               </>
             )}
           </TouchableOpacity>
-          {addedTasks[alert.id] && (
-            <TouchableOpacity
-              onPress={() => generateDetailedPDF(alert)}
-              disabled={generatingPdfId === alert.id}
-              style={{
-                height: 48,
-                borderRadius: 14,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: "transparent",
-                borderWidth: 1,
-                borderColor: "#0f0f0f",
-                marginTop: 10,
-                opacity: generatingPdfId === alert.id ? 0.5 : 1,
-              }}
-            >
-              {generatingPdfId === alert.id ? (
-                <>
-                  <ActivityIndicator color="#0f0f0f" size="small" />
-                  <Text
-                    style={{
-                      color: "#0f0f0f",
-                      fontFamily: "Inter_700Bold",
-                      fontSize: 13,
-                      marginLeft: 8,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    GENERATING DETAILED REPORT...
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Download color="#0f0f0f" size={18} />
-                  <Text
-                    style={{
-                      color: "#0f0f0f",
-                      fontFamily: "Inter_700Bold",
-                      fontSize: 13,
-                      marginLeft: 8,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.5,
-                    }}
-                  >
-                    Export PDF Report
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            onPress={() => generateDetailedPDF(alert)}
+            disabled={generatingPdfId === alert.id}
+            style={{
+              height: 48,
+              borderRadius: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "transparent",
+              borderWidth: 1,
+              borderColor: "#0f0f0f",
+              marginTop: 10,
+              opacity: generatingPdfId === alert.id ? 0.5 : 1,
+            }}
+          >
+            {generatingPdfId === alert.id ? (
+              <>
+                <ActivityIndicator color="#0f0f0f" size="small" />
+                <Text
+                  style={{
+                    color: "#0f0f0f",
+                    fontFamily: "Inter_700Bold",
+                    fontSize: 13,
+                    marginLeft: 8,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {i18n.language === "ta" ? "அறிக்கை உருவாக்கப்படுகிறது..." : "GENERATING DETAILED REPORT..."}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Download color="#0f0f0f" size={18} />
+                <Text
+                  style={{
+                    color: "#0f0f0f",
+                    fontFamily: "Inter_700Bold",
+                    fontSize: 13,
+                    marginLeft: 8,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {isTamil ? "அவசர PDF அறிக்கை பதிவிறக்கு" : "Export PDF Report"}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
 
         <View

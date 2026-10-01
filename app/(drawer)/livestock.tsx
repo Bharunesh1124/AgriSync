@@ -44,6 +44,16 @@ import { callAiJson, callAiVisionJson } from "../../src/lib/aiProvider";
 
 const { width } = Dimensions.get("window");
 
+const ANIMAL_NAMES_TA: Record<string, string> = {
+  Cattle: "மாடுகள்",
+  Goats: "ஆடுகள்",
+  Pigs: "பன்றிகள்",
+  Poultry: "கோழிகள்",
+  Buffalo: "எருமைகள்",
+  Sheep: "செம்மறியாடுகள்",
+  Horses: "குதிரைகள்",
+};
+
 const SYMPTOMS = [
   "Fever",
   "Limping",
@@ -1898,7 +1908,7 @@ export default function LivestockScreen() {
                     fontSize: 13,
                   }}
                 >
-                  {animal}
+                  {isTamil ? (ANIMAL_NAMES_TA[animal] || animal) : animal}
                 </Text>
               </TouchableOpacity>
             );
@@ -1921,6 +1931,12 @@ export default function LivestockScreen() {
         >
           {["Calf", "Growing", "Adult", "Lactating"].map((stage) => {
             const isActive = animalStage === stage;
+            const stageTa: Record<string, string> = {
+              Calf: "கன்று",
+              Growing: "வளரும் பருவம்",
+              Adult: "வளர்ந்தது",
+              Lactating: "பாலூட்டும் பருவம்",
+            };
             return (
               <TouchableOpacity
                 key={stage}
@@ -1941,7 +1957,7 @@ export default function LivestockScreen() {
                     fontSize: 13,
                   }}
                 >
-                  {stage}
+                  {isTamil ? (stageTa[stage] || stage) : stage}
                 </Text>
               </TouchableOpacity>
             );
