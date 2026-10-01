@@ -12,8 +12,6 @@ import React, { useState, useEffect } from "react";
 import {
   ShieldAlert,
   Bug,
-  CloudRain,
-  ThermometerSun,
   Plus,
   ShieldCheck,
   Zap,
@@ -25,7 +23,6 @@ import {
 } from "lucide-react-native";
 import * as Speech from "expo-speech";
 import * as Print from "expo-print";
-import { GlassCard } from "../../src/components/GlassCard";
 import { useAuth } from "../../src/contexts/AuthContext";
 import { supabase } from "../../src/lib/supabase";
 import { useTranslation } from "react-i18next";
@@ -37,9 +34,9 @@ type AlertData = {
   severity: "CRITICAL" | "WARNING" | "ADVISORY";
   type: "Pest" | "Disease" | "Weather" | "Livestock";
   description: string;
-  spreadVector: string; // E.g., "Origin: Karnataka -> Spreading to Maharashtra"
+  spreadVector: string;
   prevention: string;
-  emergencyProtocol: string; // What to do if the user's farm is already affected
+  emergencyProtocol: string;
   source: string;
 };
 
@@ -50,7 +47,7 @@ export default function AlertsScreen() {
   const [radarStatus, setRadarStatus] = useState("ANALYZING...");
   const [radarColor, setRadarColor] = useState("text-ink-muted");
   const [alerts, setAlerts] = useState<AlertData[]>([]);
-  const [farmLocation, setFarmLocation] = useState("Unknown Location");
+  const [farmLocation, setFarmLocation] = useState("Tanjore, Tamil Nadu");
   const [addedTasks, setAddedTasks] = useState<Record<string, boolean>>({});
   const [delegatingId, setDelegatingId] = useState<string | null>(null);
 
@@ -61,15 +58,17 @@ export default function AlertsScreen() {
         const {
           data: { user: currentUser },
         } = await supabase.auth.getUser();
-        let loc = "Maharashtra, India"; // Fallback
+        let loc = "Tanjore, Tamil Nadu";
         if (currentUser?.user_metadata?.location) {
           loc = currentUser.user_metadata.location;
+          setFarmLocation(loc);
+        } else {
           setFarmLocation(loc);
         }
 
         // 1. Get Coordinates
-        let lat = 19.7515;
-        let lon = 75.7139; // Default Maharashtra
+        let lat = 10.7870;
+        let lon = 79.1378;
         try {
           const geoRes = await fetch(
             `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(loc)}&count=1`,
@@ -80,29 +79,33 @@ export default function AlertsScreen() {
             lon = geoData.results[0].longitude;
           }
         } catch (e) {
-          console.warn("Geocoding failed, using fallback.");
+          console.warn("Geocoding notice: Using default coordinates.");
         }
 
         // 2. Fetch Live Weather
-        const weatherRes = await fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation`,
-        );
-        const wData = await weatherRes.json();
-        const temp = wData.current.temperature_2m;
-        const humidity = wData.current.relative_humidity_2m;
-        const wind = wData.current.wind_speed_10m;
-        const rain = wData.current.precipitation;
+        let temp = 31, humidity = 75, wind = 12, rain = 0;
+        try {
+          const weatherRes = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,precipitation`,
+          );
+          const wData = await weatherRes.json();
+          if (wData?.current) {
+            temp = wData.current.temperature_2m ?? 31;
+            humidity = wData.current.relative_humidity_2m ?? 75;
+            wind = wData.current.wind_speed_10m ?? 12;
+            rain = wData.current.precipitation ?? 0;
+          }
+        } catch (e) {
+          console.warn("Weather API notice: Using default metrics.");
+        }
 
-        // 3. Gemini AI Threat Synthesis
-        const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-        if (!apiKey) throw new Error("Missing Gemini API Key");
-
+        // 3. AI Threat Synthesis via Robust Multi-Key AI Provider
         const targetLanguage = i18n.language === "ta" ? "Tamil" : "English";
 
         const prompt = `Act as an AgTech Intelligence Engine. The current live weather for a farm in ${loc} is: Temp: ${temp}°C, Humidity: ${humidity}%, Wind: ${wind}km/h, Rain: ${rain}mm.
         Analyze this regional data and generate realistic outbreak alerts. 
-        CRITICAL: Focus HEAVILY on cross-state and regional spreading patterns (how diseases are physically moving from one state to another). Do NOT just focus on weather. You MUST include severe infectious biological diseases (viral, bacterial, fungal) that are actively spreading across borders via vectors or animal-to-animal contact. Include threats for BOTH crops AND livestock.
-        CRITICAL CONSTRAINT: You are designing for a mobile UI. ALL TEXT MUST BE ULTRA-CONCISE. Farmers do not have time to read paragraphs. Use bullet points or short fragments.
+        CRITICAL: Focus HEAVILY on cross-state and regional spreading patterns (how diseases are physically moving from one state to another). Do NOT just focus on weather. Include severe infectious biological diseases (viral, bacterial, fungal) that are actively spreading across borders via vectors or animal-to-animal contact. Include threats for BOTH crops AND livestock.
+        CRITICAL CONSTRAINT: You are designing for a mobile UI. ALL TEXT MUST BE ULTRA-CONCISE. Use bullet points or short fragments.
         MANDATORY: Generate ALL text values (title, description, spreadVector, prevention, emergencyProtocol, source) strictly in ${targetLanguage}.
         Return ONLY valid JSON matching this schema exactly:
         {
@@ -114,112 +117,82 @@ export default function AlertsScreen() {
               "title": "Short threat title",
               "severity": "CRITICAL" | "WARNING" | "ADVISORY",
               "type": "Pest" | "Disease" | "Weather" | "Livestock",
-              "description": "MAX 12 WORDS. Bullet-point style summary of the threat.",
-              "spreadVector": "MAX 8 WORDS. e.g. 'Gujarat ➔ Maharashtra'",
-              "prevention": "MAX 12 WORDS. Exact step to take. e.g. 'Deploy sticky traps at borders.'",
-              "emergencyProtocol": "MAX 15 WORDS. Exact chemical & dose. e.g. 'Apply Imidacloprid @ 125ml/ha immediately.'",
-              "source": "e.g. 'State Bio-Surveillance'"
+              "description": "MAX 12 WORDS. Bullet-point summary.",
+              "spreadVector": "MAX 8 WORDS. e.g. 'Karnataka ➔ Tamil Nadu'",
+              "prevention": "MAX 12 WORDS. Exact step.",
+              "emergencyProtocol": "MAX 15 WORDS. Exact chemical & dose.",
+              "source": "State Bio-Surveillance"
             }
           ]
-        }
-        Generate at least 3 alerts, ensuring at least one is CRITICAL and at least one is specifically a 'Livestock' threat (like Avian Flu or Lumpy Skin Disease spreading in the region).`;
+        }`;
 
-        const aiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: "application/json" },
-            }),
-          },
-        );
+        const fallbackAlertsData = {
+          radarStatus: i18n.language === "ta" ? "உயர் அபாயம்" : "HIGH RISK",
+          radarColor: "text-red-500",
+          alerts:
+            i18n.language === "ta"
+              ? [
+                  {
+                    id: "fallback-1",
+                    title: "தோல் கழலை நோய் (Lumpy Skin Disease)",
+                    severity: "CRITICAL" as const,
+                    type: "Livestock" as const,
+                    description:
+                      "அண்டை மாநிலங்களில் இருந்து பரவும் கால்நடை வைரஸ் தொற்று.",
+                    spreadVector: "கர்நாடகா ➔ தமிழ்நாடு",
+                    prevention:
+                      "கால்நடைகளை தனிமைப்படுத்தி தடுப்பூசி செலுத்தவும்.",
+                    emergencyProtocol:
+                      "தடுப்பூசி செலுத்தி கொசுக்களை கட்டுப்படுத்தவும்.",
+                    source: "மாநில கால்நடை பராமரிப்பு துறை",
+                  },
+                  {
+                    id: "fallback-2",
+                    title: "படைப்புழு தாக்குதல் (Fall Armyworm)",
+                    severity: "WARNING" as const,
+                    type: "Pest" as const,
+                    description:
+                      "சோளம் மற்றும் தானிய பயிர்களில் பரவும் படைப்புழுக்கள்.",
+                    spreadVector: "பிராந்திய காற்று வழி பரவல்",
+                    prevention: "இனிய பொறிகளை வயல்வெளிகளில் வைக்கவும்.",
+                    emergencyProtocol: "வேப்ப எண்ணெய் தெளிக்கவும்.",
+                    source: "வேளாண் கண்காணிப்பு மையம்",
+                  },
+                ]
+              : [
+                  {
+                    id: "fallback-1",
+                    title: "Lumpy Skin Disease Outbreak",
+                    severity: "CRITICAL" as const,
+                    type: "Livestock" as const,
+                    description:
+                      "Infectious viral outbreak spreading across regional borders.",
+                    spreadVector: "Karnataka ➔ Tamil Nadu",
+                    prevention: "Isolate affected cattle and restrict movement.",
+                    emergencyProtocol:
+                      "Administer goatpox vaccine and control vector flies.",
+                    source: "State Veterinary Dept",
+                  },
+                  {
+                    id: "fallback-2",
+                    title: "Fall Armyworm Infestation",
+                    severity: "WARNING" as const,
+                    type: "Pest" as const,
+                    description: "Spreading in maize and sorghum grain crops.",
+                    spreadVector: "Regional Wind Vector",
+                    prevention: "Deploy pheromone traps at field margins.",
+                    emergencyProtocol: "Apply Azadirachtin 1500 ppm spray.",
+                    source: "Agri Bio-Surveillance",
+                  },
+                ],
+        };
 
-        const aiData = await aiRes.json();
-        if (
-          aiData.error ||
-          !aiData.candidates ||
-          aiData.candidates.length === 0
-        ) {
-          throw new Error(aiData.error?.message || "No AI response");
-        }
-
-        let rawText = aiData.candidates[0].content.parts[0].text;
-        const parsed = JSON.parse(
-          rawText
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim(),
-        );
-
-        setRadarStatus(parsed.radarStatus || "HIGH RISK");
-        setRadarColor(parsed.radarColor || "text-red-500");
-        setAlerts(parsed.alerts || []);
+        const aiResult = await callAiJson<any>(prompt, fallbackAlertsData, false);
+        setRadarStatus(aiResult?.radarStatus || fallbackAlertsData.radarStatus);
+        setRadarColor(aiResult?.radarColor || fallbackAlertsData.radarColor);
+        setAlerts(aiResult?.alerts || fallbackAlertsData.alerts);
       } catch (err) {
-        console.log(
-          "Alerts Warning: Fallback used due to rate limit or network issue.",
-        );
-        setRadarStatus(i18n.language === "ta" ? "உயர் அபாயம்" : "HIGH RISK");
-        setRadarColor("text-red-500");
-        // Fallback localized alerts so user never sees empty screen or API error crash
-        setAlerts(
-          i18n.language === "ta"
-            ? [
-                {
-                  id: "fallback-1",
-                  title: "தோல் கழலை நோய் (Lumpy Skin Disease)",
-                  severity: "CRITICAL",
-                  type: "Livestock",
-                  description:
-                    "அண்டை மாநிலங்களில் இருந்து பரவும் கால்நடை வைரஸ் தொற்று.",
-                  spreadVector: "கர்நாடகா ➔ தமிழ்நாடு",
-                  prevention:
-                    "கால்நடைகளை தனிமைப்படுத்தி தடுப்பூசி செலுத்தவும்.",
-                  emergencyProtocol:
-                    "தடுப்பூசி செலுத்தி கொசுக்களை கட்டுப்படுத்தவும்.",
-                  source: "மாநில கால்நடை பராமரிப்பு துறை",
-                },
-                {
-                  id: "fallback-2",
-                  title: "படைப்புழு தாக்குதல் (Fall Armyworm)",
-                  severity: "WARNING",
-                  type: "Pest",
-                  description:
-                    "சோளம் மற்றும் தானிய பயிர்களில் பரவும் படைப்புழுக்கள்.",
-                  spreadVector: "பிராந்திய காற்று வழி பரவல்",
-                  prevention: "இனிய பொறிகளை வயல்வெளிகளில் வைக்கவும்.",
-                  emergencyProtocol: "வேப்ப எண்ணெய் தெளிக்கவும்.",
-                  source: "வேளாண் கண்காணிப்பு மையம்",
-                },
-              ]
-            : [
-                {
-                  id: "fallback-1",
-                  title: "Lumpy Skin Disease Outbreak",
-                  severity: "CRITICAL",
-                  type: "Livestock",
-                  description:
-                    "Infectious viral outbreak spreading across regional borders.",
-                  spreadVector: "Karnataka ➔ Tamil Nadu",
-                  prevention: "Isolate affected cattle and restrict movement.",
-                  emergencyProtocol:
-                    "Administer goatpox vaccine and control vector flies.",
-                  source: "State Veterinary Dept",
-                },
-                {
-                  id: "fallback-2",
-                  title: "Fall Armyworm Infestation",
-                  severity: "WARNING",
-                  type: "Pest",
-                  description: "Spreading in maize and sorghum grain crops.",
-                  spreadVector: "Regional Wind Vector",
-                  prevention: "Deploy pheromone traps at field margins.",
-                  emergencyProtocol: "Apply Azadirachtin 1500 ppm spray.",
-                  source: "Agri Bio-Surveillance",
-                },
-              ],
-        );
+        console.warn("Alerts Engine Notice: Fallback used.", err);
       } finally {
         setIsAnalyzing(false);
       }
@@ -229,7 +202,6 @@ export default function AlertsScreen() {
   }, [i18n.language]);
 
   const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
-
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   const generateLocalPDFHtml = (alert: AlertData, isTamil: boolean) => {
@@ -451,8 +423,8 @@ export default function AlertsScreen() {
       const prompt = `Write a detailed Agricultural Outbreak Report for ${alert.title}. Include prevention and chemical mixing ratios for ${alert.emergencyProtocol}. ${languageInstruction} MANDATORY: Return ONLY raw HTML. No markdown codeblock.`;
 
       const models = [
-        "gemini-3.6-flash",
-        "gemini-3.1-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
         "gemini-flash-latest",
       ];
 
@@ -507,22 +479,23 @@ export default function AlertsScreen() {
     if (!previewHtml) return;
     if (Platform.OS === "web") {
       try {
-        const printWindow = window.open("", "_blank");
-        if (printWindow) {
-          printWindow.document.write(previewHtml);
-          printWindow.document.close();
-          setTimeout(() => {
-            printWindow.focus();
-            printWindow.print();
-          }, 300);
-        } else {
-          // Fallback if popup blocked: Direct Blob download
-          const blob = new Blob([previewHtml], { type: "text/html" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `Outbreak_Emergency_Protocol_Report.html`;
-          a.click();
+        if (typeof window !== "undefined") {
+          const printWindow = window.open("", "_blank");
+          if (printWindow) {
+            printWindow.document.write(previewHtml);
+            printWindow.document.close();
+            setTimeout(() => {
+              printWindow.focus();
+              printWindow.print();
+            }, 300);
+          } else {
+            const blob = new Blob([previewHtml], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Outbreak_Emergency_Protocol_Report.html`;
+            a.click();
+          }
         }
       } catch (e) {
         console.error("Web print error:", e);
@@ -598,7 +571,6 @@ export default function AlertsScreen() {
           resources: "Follow Protocol",
         }));
       } else {
-        // Fallback generic task
         assignedTasks = [
           {
             id: `alert-${alert.id}`,
@@ -612,7 +584,6 @@ export default function AlertsScreen() {
         ];
       }
 
-      // Separate tasks into their respective domains
       const isLivestock = alert.type === "Livestock";
       const targetKey = isLivestock ? "vaccines_Cow" : "crops_Wheat";
 
@@ -623,19 +594,25 @@ export default function AlertsScreen() {
 
       setAddedTasks((prev) => ({ ...prev, [alert.id]: true }));
 
-      if (Platform.OS === "web")
-        window.alert(
-          "Smart Agenda Updated! AI has delegated emergency tasks to your team.",
-        );
-      else
+      if (Platform.OS === "web") {
+        if (typeof window !== "undefined") {
+          window.alert(
+            "Smart Agenda Updated! AI has delegated emergency tasks to your team.",
+          );
+        }
+      } else {
         Alert.alert(
           "Protocol Initiated",
           "AI has delegated emergency tasks to your team.",
         );
+      }
     } catch (e) {
       console.error(e);
-      if (Platform.OS === "web") window.alert("Failed to initiate protocol.");
-      else Alert.alert("Error", "Failed to initiate protocol.");
+      if (Platform.OS === "web") {
+        if (typeof window !== "undefined") window.alert("Failed to initiate protocol.");
+      } else {
+        Alert.alert("Error", "Failed to initiate protocol.");
+      }
     } finally {
       setDelegatingId(null);
     }
@@ -787,13 +764,17 @@ export default function AlertsScreen() {
             </View>
             <TouchableOpacity
               onPress={() => {
-                Speech.stop();
-                const textToRead = `${alert.title}. ${alert.description}. Prevention protocol: ${alert.prevention}. Emergency protocol: ${alert.emergencyProtocol}`;
-                Speech.speak(textToRead, {
-                  language: i18n.language === "ta" ? "ta-IN" : "en-US",
-                  pitch: 1.0,
-                  rate: 0.9,
-                });
+                try {
+                  Speech.stop();
+                  const textToRead = `${alert.title}. ${alert.description}. Prevention protocol: ${alert.prevention}. Emergency protocol: ${alert.emergencyProtocol}`;
+                  Speech.speak(textToRead, {
+                    language: i18n.language === "ta" ? "ta-IN" : "en-US",
+                    pitch: 1.0,
+                    rate: 0.9,
+                  });
+                } catch (e) {
+                  console.warn("Speech notice:", e);
+                }
               }}
               style={{
                 backgroundColor: "#ffffff",
@@ -989,6 +970,7 @@ export default function AlertsScreen() {
               </>
             )}
           </TouchableOpacity>
+
           <TouchableOpacity
             onPress={() => generateDetailedPDF(alert)}
             disabled={generatingPdfId === alert.id}
@@ -1034,7 +1016,7 @@ export default function AlertsScreen() {
                     letterSpacing: 0.5,
                   }}
                 >
-                  {isTamil ? "அவசர PDF அறிக்கை பதிவிறக்கு" : "Export PDF Report"}
+                  {i18n.language === "ta" ? "அவசர PDF அறிக்கை பதிவிறக்கு" : "Export PDF Report"}
                 </Text>
               </>
             )}
@@ -1065,7 +1047,7 @@ export default function AlertsScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-[#f0ece4] pt-24 px-6" showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
+    <ScrollView style={{ flex: 1, backgroundColor: "#f0ece4", paddingTop: 80, paddingHorizontal: 20 }} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={{ marginBottom: 20 }}>
         <Text
@@ -1114,7 +1096,7 @@ export default function AlertsScreen() {
           ) : (
             <Zap
               color={
-                radarStatus === "HIGH RISK"
+                radarStatus === "HIGH RISK" || radarStatus.includes("அபாயம்")
                   ? "#ef4444"
                   : radarStatus === "STABLE"
                     ? "#10b981"
@@ -1138,10 +1120,10 @@ export default function AlertsScreen() {
         </Text>
         <Text
           style={{
-            fontFamily: "BebasNeue_400Regular",
-            fontSize: 44,
+            fontFamily: i18n.language === "ta" ? "Inter_700Bold" : "BebasNeue_400Regular",
+            fontSize: i18n.language === "ta" ? 32 : 44,
             color:
-              radarStatus === "HIGH RISK"
+              radarStatus === "HIGH RISK" || radarStatus.includes("அபாயம்")
                 ? "#dc2626"
                 : radarStatus === "STABLE"
                   ? "#10b981"
@@ -1166,25 +1148,26 @@ export default function AlertsScreen() {
       </View>
 
       {/* 2. Severity Board (Alert Feed) */}
-      <Text className="font-bebas text-2xl text-ink mb-4">
+      <Text style={{ fontFamily: i18n.language === "ta" ? "Inter_700Bold" : "BebasNeue_400Regular", fontSize: 26, color: "#0f0f0f", marginBottom: 16 }}>
         {t("threat_breakdown")}
       </Text>
 
       {isAnalyzing ? (
-        <View className="py-10 items-center">
-          <Text className="text-ink-muted font-bold animate-pulse">
+        <View style={{ paddingVertical: 40, alignItems: "center" }}>
+          <ActivityIndicator size="large" color="#0f0f0f" />
+          <Text style={{ color: "#555555", fontWeight: "700", marginTop: 12 }}>
             {t("scanning_data")}
           </Text>
         </View>
       ) : (
         <>
           {/* CRITICAL SECTION */}
-          <View className="mb-6">
-            <Text className="text-red-600 font-bold text-sm uppercase tracking-widest mb-3 border-b border-red-500/20 pb-1">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: "#dc2626", fontWeight: "700", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "rgba(220, 38, 38, 0.2)", paddingBottom: 4 }}>
               {t("critical_threats")}
             </Text>
             {alerts.filter((a) => a.severity === "CRITICAL").length === 0 ? (
-              <Text className="text-ink-muted text-xs italic">
+              <Text style={{ color: "#555555", fontSize: 12, fontStyle: "italic" }}>
                 {t("no_critical_threats")}
               </Text>
             ) : (
@@ -1195,12 +1178,12 @@ export default function AlertsScreen() {
           </View>
 
           {/* WARNING SECTION */}
-          <View className="mb-6">
-            <Text className="text-orange-500 font-bold text-sm uppercase tracking-widest mb-3 border-b border-orange-500/20 pb-1">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: "#ea580c", fontWeight: "700", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "rgba(234, 88, 12, 0.2)", paddingBottom: 4 }}>
               {t("warning_threats")}
             </Text>
             {alerts.filter((a) => a.severity === "WARNING").length === 0 ? (
-              <Text className="text-ink-muted text-xs italic">
+              <Text style={{ color: "#555555", fontSize: 12, fontStyle: "italic" }}>
                 {t("no_warning_threats")}
               </Text>
             ) : (
@@ -1211,12 +1194,12 @@ export default function AlertsScreen() {
           </View>
 
           {/* ADVISORY SECTION */}
-          <View className="mb-6">
-            <Text className="text-yellow-600 font-bold text-sm uppercase tracking-widest mb-3 border-b border-yellow-500/20 pb-1">
+          <View style={{ marginBottom: 24 }}>
+            <Text style={{ color: "#ca8a04", fontWeight: "700", fontSize: 12, textTransform: "uppercase", letterSpacing: 1, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: "rgba(202, 138, 4, 0.2)", paddingBottom: 4 }}>
               {t("advisory_threats")}
             </Text>
             {alerts.filter((a) => a.severity === "ADVISORY").length === 0 ? (
-              <Text className="text-ink-muted text-xs italic">
+              <Text style={{ color: "#555555", fontSize: 12, fontStyle: "italic" }}>
                 {t("no_advisory_threats")}
               </Text>
             ) : (
@@ -1343,26 +1326,20 @@ export default function AlertsScreen() {
 
             {/* Content Body */}
             <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-              {Platform.OS === "web" ? (
-                <iframe
-                  srcDoc={previewHtml || ""}
-                  style={{ width: "100%", height: "100%", border: "none" }}
-                />
-              ) : (
-                <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false} showsHorizontalScrollIndicator={false}>
-                  <Text
-                    style={{
-                      fontFamily: "Inter_500Medium",
-                      color: "#64748b",
-                      textAlign: "center",
-                    }}
-                  >
-                    {i18n.language === "ta"
-                      ? "முன்னோட்டம் வெப் பதிப்பில் கிடைக்கிறது."
-                      : "Preview available."}
-                  </Text>
-                </ScrollView>
-              )}
+              <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
+                <Text
+                  style={{
+                    fontFamily: "Inter_500Medium",
+                    color: "#64748b",
+                    textAlign: "center",
+                    marginBottom: 12,
+                  }}
+                >
+                  {i18n.language === "ta"
+                    ? "அறிக்கை தயாராக உள்ளது. அச்சிட அல்லது பதிவிறக்க கீழே உள்ள பொத்தானை கிளிக் செய்யவும்."
+                    : "Report generated successfully. Click below to print or download as PDF."}
+                </Text>
+              </ScrollView>
             </View>
 
             {/* Bottom Action Bar */}
@@ -1440,7 +1417,7 @@ export default function AlertsScreen() {
         </View>
       </Modal>
 
-      <View className="h-12" />
+      <View style={{ height: 48 }} />
     </ScrollView>
   );
 }
