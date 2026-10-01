@@ -5,7 +5,6 @@ import { supabase } from '../src/lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { GlassCard } from '../src/components/GlassCard';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { Mail, Lock, User as UserIcon, MapPin, ArrowLeft, Eye, EyeOff, Zap, Wallet } from 'lucide-react-native';
 import { useAuth, getPersistentProfile } from '../src/contexts/AuthContext';
 
@@ -39,9 +38,10 @@ export default function LoginScreen() {
         if (result.type === 'success') {
           const { error: sessionError } = await (supabase.auth as any).getSessionFromUrl({ url: result.url });
           if (sessionError) {
-            const { params, errorCode } = QueryParams.getQueryParams(result.url);
-            if (errorCode) throw new Error(errorCode);
-            const { access_token, refresh_token } = params;
+            const parsed = Linking.parse(result.url);
+            const params = parsed.queryParams || {};
+            const access_token = params.access_token as string;
+            const refresh_token = params.refresh_token as string;
             if (access_token && refresh_token) {
               await supabase.auth.setSession({ access_token, refresh_token });
             }
