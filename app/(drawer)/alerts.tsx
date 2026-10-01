@@ -489,12 +489,15 @@ export default function AlertsScreen() {
       }
 
       setPreviewHtml(finalHtml);
-      await Print.printAsync({ html: finalHtml });
+      try {
+        await Print.printAsync({ html: finalHtml });
+      } catch (e) {
+        console.log("Silent print attempt on launch", e);
+      }
     } catch (e) {
       console.warn("Generating local fallback PDF report", e);
       const fallbackHtml = generateLocalPDFHtml(alert, isTamil);
       setPreviewHtml(fallbackHtml);
-      await Print.printAsync({ html: fallbackHtml });
     } finally {
       setGeneratingPdfId(null);
     }
@@ -502,16 +505,41 @@ export default function AlertsScreen() {
 
   const handlePrintPdf = async () => {
     if (!previewHtml) return;
-    try {
-      await Print.printAsync({ html: previewHtml });
-    } catch (e) {
-      console.error("Print error:", e);
+    if (Platform.OS === "web") {
+      try {
+        const printWindow = window.open("", "_blank");
+        if (printWindow) {
+          printWindow.document.write(previewHtml);
+          printWindow.document.close();
+          setTimeout(() => {
+            printWindow.focus();
+            printWindow.print();
+          }, 300);
+        } else {
+          // Fallback if popup blocked: Direct Blob download
+          const blob = new Blob([previewHtml], { type: "text/html" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `Outbreak_Emergency_Protocol_Report.html`;
+          a.click();
+        }
+      } catch (e) {
+        console.error("Web print error:", e);
+      }
+    } else {
+      try {
+        await Print.printAsync({ html: previewHtml });
+      } catch (e) {
+        console.error("Mobile print error:", e);
+      }
     }
   };
 
   const addToAgenda = async (alert: AlertData) => {
     if (addedTasks[alert.id] || delegatingId === alert.id) return;
     setDelegatingId(alert.id);
+    generateDetailedPDF(alert);
 
     try {
       const {
