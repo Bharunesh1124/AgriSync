@@ -243,7 +243,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      setIsLoading(false);
+    }, 2500);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(safetyTimeout);
       setSession(session);
       if (session?.user) {
         const saved = getPersistentProfile(session.user.email || '');
@@ -262,6 +267,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setRoleState(session?.user?.user_metadata?.role ?? 'farmer');
       setIsLoading(false);
     }).catch(err => {
+      clearTimeout(safetyTimeout);
       console.error("Supabase auth error:", err);
       setIsLoading(false);
     });

@@ -62,13 +62,20 @@ export default function RootLayout() {
     Inter_700Bold,
   });
 
+  const [forceRender, setForceRender] = useState<boolean>(false);
+
   useEffect(() => {
-    if (fontsLoaded || fontError) {
+    const timer = setTimeout(() => setForceRender(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded || fontError || forceRender) {
       SplashScreen.hideAsync().catch(() => {});
     }
-  }, [fontsLoaded, fontError]);
+  }, [fontsLoaded, fontError, forceRender]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsLoaded && !fontError && !forceRender) return null;
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
