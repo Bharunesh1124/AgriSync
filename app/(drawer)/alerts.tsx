@@ -414,57 +414,36 @@ export default function AlertsScreen() {
     const isTamil = i18n.language === "ta";
 
     try {
-      let finalHtml = "";
-      const keysPool = getGeminiKeysPool();
-      const languageInstruction = isTamil
-        ? "MANDATORY: The entire report MUST be written in Tamil (தமிழ்)."
-        : "The report must be written in English.";
-
-      const prompt = `Write a detailed Agricultural Outbreak Report for ${alert.title}. Include prevention and chemical mixing ratios for ${alert.emergencyProtocol}. ${languageInstruction} MANDATORY: Return ONLY raw HTML. No markdown codeblock.`;
-
-      const models = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-flash-latest",
-      ];
-
-      for (const apiKey of keysPool) {
-        for (const model of models) {
-          try {
-            const aiRes = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  contents: [{ parts: [{ text: prompt }] }],
-                }),
-              },
-            );
-            const aiData = await aiRes.json();
-            if (aiData.candidates?.[0]?.content?.parts?.[0]?.text) {
-              finalHtml = aiData.candidates[0].content.parts[0].text
-                .replace(/```html/g, "")
-                .replace(/```/g, "")
-                .trim();
-              break;
-            }
-          } catch (e) {
-            console.warn(`Model ${model} failover...`, e);
-          }
-        }
-        if (finalHtml) break;
-      }
-
-      if (!finalHtml) {
-        finalHtml = generateLocalPDFHtml(alert, isTamil);
-      }
-
+      const finalHtml = generateLocalPDFHtml(alert, isTamil);
       setPreviewHtml(finalHtml);
-      try {
-        await Print.printAsync({ html: finalHtml });
-      } catch (e) {
-        console.log("Silent print attempt on launch", e);
+
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        try {
+          const printWindow = window.open("", "_blank");
+          if (printWindow) {
+            printWindow.document.write(finalHtml);
+            printWindow.document.close();
+            setTimeout(() => {
+              printWindow.focus();
+              printWindow.print();
+            }, 250);
+          } else {
+            const blob = new Blob([finalHtml], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${alert.title.replace(/[^a-zA-Z0-9]/g, "_")}_Emergency_Report.html`;
+            a.click();
+          }
+        } catch (e) {
+          console.warn("Direct print notice:", e);
+        }
+      } else {
+        try {
+          await Print.printAsync({ html: finalHtml });
+        } catch (e) {
+          console.log("Silent print attempt on launch", e);
+        }
       }
     } catch (e) {
       console.warn("Generating local fallback PDF report", e);
@@ -1325,21 +1304,29 @@ export default function AlertsScreen() {
             </View>
 
             {/* Content Body */}
-            <View style={{ flex: 1, backgroundColor: "#f8fafc" }}>
-              <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
-                <Text
-                  style={{
-                    fontFamily: "Inter_500Medium",
-                    color: "#64748b",
-                    textAlign: "center",
-                    marginBottom: 12,
-                  }}
-                >
-                  {i18n.language === "ta"
-                    ? "அறிக்கை தயாராக உள்ளது. அச்சிட அல்லது பதிவிறக்க கீழே உள்ள பொத்தானை கிளிக் செய்யவும்."
-                    : "Report generated successfully. Click below to print or download as PDF."}
-                </Text>
-              </ScrollView>
+            <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+              {Platform.OS === "web" ? (
+                <iframe
+                  srcDoc={previewHtml || ""}
+                  style={{ width: "100%", height: "100%", border: "none" }}
+                  title="Emergency Report Preview"
+                />
+              ) : (
+                <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
+                  <Text
+                    style={{
+                      fontFamily: "Inter_500Medium",
+                      color: "#64748b",
+                      textAlign: "center",
+                      marginBottom: 12,
+                    }}
+                  >
+                    {i18n.language === "ta"
+                      ? "அறிக்கை தயாராக உள்ளது. அச்சிட அல்லது பதிவிறக்க கீழே உள்ள பொத்தானை கிளிக் செய்யவும்."
+                      : "Report generated successfully. Click below to print or download as PDF."}
+                  </Text>
+                </ScrollView>
+              )}
             </View>
 
             {/* Bottom Action Bar */}

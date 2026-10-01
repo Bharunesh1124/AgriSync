@@ -64,6 +64,66 @@ const SYMPTOMS = [
   "Diarrhea",
 ];
 
+const SYMPTOM_NAMES_TA: Record<string, string> = {
+  Fever: "காய்ச்சல்",
+  Limping: "நொண்டி நடப்பது",
+  "Blisters on Mouth": "வாயில் கொப்புளங்கள்",
+  Lethargy: "சோர்வு / மந்தம்",
+  Coughing: "இருமல்",
+  "Loss of Appetite": "பசியின்மை",
+  Diarrhea: "வயிற்றுப்போக்கு",
+};
+
+const translateScheduleName = (name: string, isTamil: boolean) => {
+  if (!isTamil || !name) return name;
+  if (name.includes("FMD")) return "கோமாரி நோய் பூஸ்டர் தடுப்பூசி (FMD)";
+  if (name.includes("Deworming") || name.includes("Albendazole") || name.includes("குடற்புழு")) return "வழக்கமான குடற்புழு நீக்கம் (அல்பெண்டசோல்)";
+  if (name.includes("PPR")) return "PPR தடுப்பூசி பூஸ்டர்";
+  if (name.includes("Checkup") || name.includes("Health") || name.includes("பரிசோதனை")) return "பொது சுகாதார பரிசோதனை";
+  if (name.includes("Vaccine") || name.includes("தடுப்பூசி")) return "தடுப்பூசி பூஸ்டர்";
+  return name;
+};
+
+const translateCategory = (cat: string, isTamil: boolean) => {
+  if (!isTamil || !cat) return cat;
+  const upper = (cat || "").toUpperCase();
+  if (upper.includes("VACCIN")) return "தடுப்பூசி";
+  if (upper.includes("MEDIC")) return "மருந்து";
+  if (upper.includes("HEALTH") || upper.includes("CHECK")) return "பரிசோதனை";
+  return cat;
+};
+
+const translateDateStr = (dateStr: string, isTamil: boolean) => {
+  if (!isTamil || !dateStr) return dateStr;
+  return dateStr
+    .replace(/Due in exactly (\d+) days/gi, "$1 நாட்களில் நிலுவை")
+    .replace(/Due in (\d+) days/gi, "$1 நாட்களில் நிலுவை")
+    .replace(/Mar/gi, "மார்ச்")
+    .replace(/Dec/gi, "டிசம்பர்")
+    .replace(/Jan/gi, "ஜனவரி")
+    .replace(/Feb/gi, "பிப்ரவரி")
+    .replace(/Apr/gi, "ஏப்ரல்")
+    .replace(/May/gi, "மே")
+    .replace(/Jun/gi, "ஜூன்")
+    .replace(/Jul/gi, "ஜூலை")
+    .replace(/Aug/gi, "ஆகஸ்ட்")
+    .replace(/Sep/gi, "செப்டம்பர்")
+    .replace(/Oct/gi, "அக்டோபர்")
+    .replace(/Nov/gi, "நவம்பர்");
+};
+
+const translateMedicalDetail = (text: string, isTamil: boolean) => {
+  if (!isTamil || !text) return text;
+  if (text.includes("Clears parasitic load")) return "ஒட்டுண்ணிகளை நீக்கி, உகந்த ஊட்டச்சத்து உறிஞ்சுதலை உறுதி செய்கிறது.";
+  if (text.includes("Routine hoof inspection")) return "வழக்கமான குளம்பு பரிசோதனை மற்றும் உடல் நிலை மதிப்பீடு.";
+  if (text.includes("Prevents Foot and Mouth") || text.includes("Peste des Petits")) return "கடுமையான பாதிப்பை ஏற்படுத்தும் வைரஸ் நோயைத் தடுக்கிறது.";
+  if (text.includes("Standard protocol")) return "மந்தைக்கான நிலையான மருத்துவ நெறிமுறை.";
+  if (text.includes("Based on a")) return text.replace(/Based on a (\d+)-day repeating cycle\./, "$1-நாள் சுழற்சி அடிப்படையில்.");
+  if (text.includes("Follow veterinary")) return "கால்நடை மருத்துவரின் அறிவுறுத்தல்களைப் பின்பற்றவும்.";
+  if (text.includes("No specific warnings")) return "குறிப்பிட்ட எச்சரிக்கைகள் எதுவும் இல்லை.";
+  return text;
+};
+
 export default function LivestockScreen() {
   const router = useRouter();
   const { t, i18n } = useTranslation();
@@ -227,6 +287,7 @@ export default function LivestockScreen() {
     {
       id: "1",
       name: "FMD Vaccine Booster (Booster)",
+      category: "VACCINATION",
       status: "Upcoming",
       dateStr: "Due in exactly 180 days (Mar 5, 2027)",
       intervalDays: 180,
@@ -234,6 +295,7 @@ export default function LivestockScreen() {
     {
       id: "2",
       name: "Deworming (Albendazole) (Booster)",
+      category: "MEDICATION",
       status: "Upcoming",
       dateStr: "Due in exactly 90 days (Dec 5, 2026)",
       intervalDays: 90,
@@ -302,7 +364,7 @@ export default function LivestockScreen() {
 
   const calculateFeed = async () => {
     if (!weight || !age) {
-      setErrorMsgFeed(t("Please enter weight and age"));
+      setErrorMsgFeed(isTamil ? "எடை மற்றும் வயதை உள்ளிடவும்" : "Please enter weight and age");
       return;
     }
     setIsCalculatingFeed(true);
@@ -767,7 +829,7 @@ export default function LivestockScreen() {
 
   const runSymptomChecker = async () => {
     if (selectedSymptoms.length === 0 && !imageUri) {
-      setErrorMsg(t("Please select at least one symptom or upload a photo."));
+      setErrorMsg(isTamil ? "குறைந்தது ஒரு அறிகுறியைத் தேர்ந்தெடுக்கவும் அல்லது புகைப்படத்தைப் பதிவேற்றவும்." : "Please select at least one symptom or upload a photo.");
       return;
     }
     setIsAnalyzing(true);
@@ -893,7 +955,7 @@ export default function LivestockScreen() {
             lineHeight: isTamil ? 28 : 42,
           }}
         >
-          {t("LIVESTOCK MANAGEMENT")}
+          {isTamil ? "கால்நடை மேலாண்மை" : "LIVESTOCK MANAGEMENT"}
         </Text>
         <Text
           style={{
@@ -903,7 +965,7 @@ export default function LivestockScreen() {
             marginTop: 2,
           }}
         >
-          {t("AI Feed Formulations & Health Tracking")}
+          {isTamil ? "AI தீவன அமைப்பு & சுகாதார கண்காணிப்பு" : "AI Feed Formulations & Health Tracking"}
         </Text>
       </View>
 
@@ -939,13 +1001,13 @@ export default function LivestockScreen() {
               letterSpacing: -0.5,
             }}
           >
-            {t("LIVESTOCK PERFORMANCE")}
+            {isTamil ? "கால்நடை செயல்திறன்" : "LIVESTOCK PERFORMANCE"}
           </Text>
           <TouchableOpacity>
             <Text
               style={{ color: "#0ea5e9", fontWeight: "bold", fontSize: 11 }}
             >
-              {t("View Details")} →
+              {isTamil ? "விவரங்கள்" : "View Details"} →
             </Text>
           </TouchableOpacity>
         </View>
@@ -990,7 +1052,7 @@ export default function LivestockScreen() {
                 letterSpacing: 1,
               }}
             >
-              {t("Active Animals")}
+              {isTamil ? "செயலில் உள்ள கால்நடைகள்" : "Active Animals"}
             </Text>
           </View>
         </View>
@@ -1018,7 +1080,7 @@ export default function LivestockScreen() {
             <Text
               style={{ color: "#047857", fontSize: 11, fontWeight: "bold" }}
             >
-              {t("Health")}
+              {isTamil ? "ஆரோக்கியம்" : "Health"}
             </Text>
             <Text
               style={{
@@ -1045,7 +1107,7 @@ export default function LivestockScreen() {
             <Text
               style={{ color: "#1d4ed8", fontSize: 11, fontWeight: "bold" }}
             >
-              {t("Vaccination")}
+              {isTamil ? "தடுப்பூசி" : "Vaccination"}
             </Text>
             <Text
               style={{
@@ -1081,7 +1143,7 @@ export default function LivestockScreen() {
             <Text
               style={{ color: "#c2410c", fontSize: 11, fontWeight: "bold" }}
             >
-              {t("Feed Schedule")}
+              {isTamil ? "தீவன அட்டவணை" : "Feed Schedule"}
             </Text>
             <Text
               style={{
@@ -1108,7 +1170,7 @@ export default function LivestockScreen() {
             <Text
               style={{ color: "#7e22ce", fontSize: 11, fontWeight: "bold" }}
             >
-              {t("Task Completion")}
+              {isTamil ? "பணிகள் நிறைவு" : "Task Completion"}
             </Text>
             <Text
               style={{
@@ -1147,7 +1209,7 @@ export default function LivestockScreen() {
               marginBottom: 12,
             }}
           >
-            {t("THIS MONTH")}
+            {isTamil ? "இந்த மாதம்" : "THIS MONTH"}
           </Text>
 
           <View
@@ -1159,7 +1221,7 @@ export default function LivestockScreen() {
             }}
           >
             <Text style={{ color: "#64748b", fontSize: 12, fontWeight: "600" }}>
-              {t("Feed Cost")}
+              {isTamil ? "தீவன செலவு" : "Feed Cost"}
             </Text>
             <Text
               style={{
@@ -1181,7 +1243,7 @@ export default function LivestockScreen() {
             }}
           >
             <Text style={{ color: "#64748b", fontSize: 12, fontWeight: "600" }}>
-              {t("Milk Production")}
+              {isTamil ? "பால் உற்பத்தி" : "Milk Production"}
             </Text>
             {milkProductionMonth !== null ? (
               <Text
@@ -1208,7 +1270,7 @@ export default function LivestockScreen() {
                 <Text
                   style={{ fontSize: 9, fontWeight: "bold", color: "#64748b" }}
                 >
-                  + {t("Record Data")}
+                  + {isTamil ? "தரவு பதிவு" : "Record Data"}
                 </Text>
               </TouchableOpacity>
             )}
@@ -1222,7 +1284,7 @@ export default function LivestockScreen() {
             }}
           >
             <Text style={{ color: "#64748b", fontSize: 12, fontWeight: "600" }}>
-              {t("Health Events")}
+              {isTamil ? "சுகாதார நிகழ்வுகள்" : "Health Events"}
             </Text>
             <Text
               style={{
@@ -1273,7 +1335,7 @@ export default function LivestockScreen() {
               color: "#0f0f0f",
             }}
           >
-            {t("ML Feed Calculator")}
+            {isTamil ? "ML தீவன கணக்கீட்டாளர்" : "ML Feed Calculator"}
           </Text>
         </View>
 
@@ -1302,7 +1364,7 @@ export default function LivestockScreen() {
                     color: isActive ? "#ffffff" : "#0f0f0f",
                   }}
                 >
-                  {t(animal)}
+                  {isTamil ? (ANIMAL_NAMES_TA[animal] || animal) : animal}
                 </Text>
               </TouchableOpacity>
             );
@@ -1317,7 +1379,7 @@ export default function LivestockScreen() {
           }}
         >
           <TextInput
-            placeholder={t("Weight (kg)")}
+            placeholder={isTamil ? "எடை (கிலோ)" : "Weight (kg)"}
             value={weight}
             onChangeText={setWeight}
             keyboardType="numeric"
@@ -1334,7 +1396,7 @@ export default function LivestockScreen() {
             }}
           />
           <TextInput
-            placeholder={t("Age (Months)")}
+            placeholder={isTamil ? "வயது (மாதங்கள்)" : "Age (Months)"}
             value={age}
             onChangeText={setAge}
             keyboardType="numeric"
@@ -1375,7 +1437,7 @@ export default function LivestockScreen() {
                 textTransform: "uppercase",
               }}
             >
-              {t("CALCULATE FORMULATION")}
+              {isTamil ? "தீவன கலவையை கணக்கிடு" : "CALCULATE FORMULATION"}
             </Text>
           )}
         </TouchableOpacity>
@@ -1412,7 +1474,7 @@ export default function LivestockScreen() {
                       letterSpacing: 0.5,
                     }}
                   >
-                    {t("RECOMMENDED FEED")}
+                    {isTamil ? "பரிந்துரைக்கப்பட்ட தீவனம்" : "RECOMMENDED FEED"}
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -1438,7 +1500,7 @@ export default function LivestockScreen() {
                       fontSize: 11,
                     }}
                   >
-                    {t("Read Aloud")}
+                    {isTamil ? "படித்துக் காட்டு" : "Read Aloud"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1475,7 +1537,7 @@ export default function LivestockScreen() {
                   textTransform: "uppercase",
                 }}
               >
-                {t("DAILY BREAKDOWN")}
+                {isTamil ? "தினசரி விவரம்" : "DAILY BREAKDOWN"}
               </Text>
               <View
                 style={{
@@ -1493,7 +1555,7 @@ export default function LivestockScreen() {
                       fontFamily: "Inter_400Regular",
                     }}
                   >
-                    {t("Dry Matter (Pure Nutrients)")}
+                    {isTamil ? "உலர் பொருள் (தூய ஊட்டச்சத்துகள்)" : "Dry Matter (Pure Nutrients)"}
                   </Text>
                   <Text
                     style={{
@@ -1514,7 +1576,7 @@ export default function LivestockScreen() {
                       fontFamily: "Inter_400Regular",
                     }}
                   >
-                    {t("As-Fed (Trough Weight)")}
+                    {isTamil ? "மொத்த தீவனம் (தொட்டி எடை)" : "As-Fed (Trough Weight)"}
                   </Text>
                   <Text
                     style={{
@@ -1572,7 +1634,7 @@ export default function LivestockScreen() {
                     textTransform: "uppercase",
                   }}
                 >
-                  {t("DAILY MIXING RECIPE")}
+                  {isTamil ? "தினசரி கலவை முறை" : "DAILY MIXING RECIPE"}
                 </Text>
 
                 {/* Visual Ratio Bar */}
@@ -1741,50 +1803,50 @@ export default function LivestockScreen() {
                   borderColor: "rgba(0,0,0,0.05)",
                 }}
               >
-                <Text
+                  <Text
+                    style={{
+                      color: "#555555",
+                      fontFamily: "Inter_700Bold",
+                      fontSize: 10,
+                      letterSpacing: 0.5,
+                      marginBottom: 8,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {isTamil ? "வாராந்திர அளவு" : "WEEKLY (AS-FED)"}
+                  </Text>
+                  <Text
+                    style={{
+                      color: "#0f0f0f",
+                      fontFamily: "Inter_700Bold",
+                      fontSize: 20,
+                    }}
+                  >
+                    {feedResult.weeklyAsFedKg} kg
+                  </Text>
+                </View>
+                <View
                   style={{
-                    color: "#555555",
-                    fontFamily: "Inter_700Bold",
-                    fontSize: 10,
-                    letterSpacing: 0.5,
-                    marginBottom: 8,
-                    textTransform: "uppercase",
+                    width: "48%",
+                    backgroundColor: "#ffffff",
+                    padding: 16,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: "rgba(0,0,0,0.05)",
                   }}
                 >
-                  {t("WEEKLY (AS-FED)")}
-                </Text>
-                <Text
-                  style={{
-                    color: "#0f0f0f",
-                    fontFamily: "Inter_700Bold",
-                    fontSize: 20,
-                  }}
-                >
-                  {feedResult.weeklyAsFedKg} kg
-                </Text>
-              </View>
-              <View
-                style={{
-                  width: "48%",
-                  backgroundColor: "#ffffff",
-                  padding: 16,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: "rgba(0,0,0,0.05)",
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#555555",
-                    fontFamily: "Inter_700Bold",
-                    fontSize: 10,
-                    letterSpacing: 0.5,
-                    marginBottom: 8,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {t("MONTHLY (AS-FED)")}
-                </Text>
+                  <Text
+                    style={{
+                      color: "#555555",
+                      fontFamily: "Inter_700Bold",
+                      fontSize: 10,
+                      letterSpacing: 0.5,
+                      marginBottom: 8,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {isTamil ? "மாதாந்திர அளவு" : "MONTHLY (AS-FED)"}
+                  </Text>
                 <Text
                   style={{
                     color: "#0f0f0f",
@@ -1817,7 +1879,7 @@ export default function LivestockScreen() {
                   textTransform: "uppercase",
                 }}
               >
-                {t("ESTIMATED MONTHLY COST")}
+                {isTamil ? "மதிப்பிடப்பட்ட மாதாந்திர செலவு" : "ESTIMATED MONTHLY COST"}
               </Text>
               <Text
                 style={{
@@ -1865,7 +1927,7 @@ export default function LivestockScreen() {
               textTransform: "uppercase",
             }}
           >
-            🤖 {t("AI FEED PLANNER")}
+            {isTamil ? "🤖 AI தீவன திட்டமிடுபவர்" : "🤖 AI FEED PLANNER"}
           </Text>
         </View>
 
@@ -1881,7 +1943,7 @@ export default function LivestockScreen() {
             textTransform: "uppercase",
           }}
         >
-          {t("Select Animal Type")}
+          {isTamil ? "விலங்கு வகையைத் தேர்ந்தெடுக்கவும்" : "Select Animal Type"}
         </Text>
         <View
           style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 16 }}
@@ -1924,7 +1986,7 @@ export default function LivestockScreen() {
             textTransform: "uppercase",
           }}
         >
-          {t("Select Stage")}
+          {isTamil ? "பருவத்தைத் தேர்ந்தெடுக்கவும்" : "Select Stage"}
         </Text>
         <View
           style={{ flexDirection: "row", flexWrap: "wrap", marginBottom: 16 }}
@@ -1974,7 +2036,7 @@ export default function LivestockScreen() {
               textTransform: "uppercase",
             }}
           >
-            {t("Number of Animals")}
+            {isTamil ? "விலங்குகளின் எண்ணிக்கை" : "Number of Animals"}
           </Text>
           <TextInput
             value={animalCount}
@@ -2013,7 +2075,7 @@ export default function LivestockScreen() {
                 fontSize: 14,
               }}
             >
-              {t("CREATE FEED PLAN")} →
+              {isTamil ? "தீவன திட்டம் உருவாக்க" : "CREATE FEED PLAN"} →
             </Text>
           )}
         </TouchableOpacity>
@@ -2035,7 +2097,7 @@ export default function LivestockScreen() {
                 marginBottom: 16,
               }}
             >
-              {animalCount} {animalStage} {animalType} - {t("Today's Schedule")}
+              {animalCount} {animalStage} {isTamil ? (ANIMAL_NAMES_TA[animalType] || animalType) : animalType} - {isTamil ? "இன்றைய அட்டவணை" : "Today's Schedule"}
             </Text>
 
             {feedPlan.map((feed, index) => (
@@ -2099,7 +2161,7 @@ export default function LivestockScreen() {
                   <Text
                     style={{ fontSize: 12, color: "#64748b", marginBottom: 12 }}
                   >
-                    Feed: {feed.feedComposition}
+                    {isTamil ? "தீவனம்: " : "Feed: "}{feed.feedComposition}
                   </Text>
 
                   <TouchableOpacity
@@ -2127,7 +2189,7 @@ export default function LivestockScreen() {
                         color: feed.completed ? "#22c55e" : "#64748b",
                       }}
                     >
-                      {feed.completed ? "Completed" : "Pending"}
+                      {feed.completed ? (isTamil ? "முடிந்தது" : "Completed") : (isTamil ? "நிலுவையில்" : "Pending")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -2173,7 +2235,7 @@ export default function LivestockScreen() {
               color: "#0f0f0f",
             }}
           >
-            {t("Health & Vaccination Schedule")}
+            {isTamil ? "சுகாதாரம் & தடுப்பூசி அட்டவணை" : "Health & Vaccination Schedule"}
           </Text>
         </View>
 
@@ -2187,7 +2249,7 @@ export default function LivestockScreen() {
             textTransform: "uppercase",
           }}
         >
-          {t("UPCOMING MEDICAL TASKS (NEXT 3)")}
+          {isTamil ? "வரவிருக்கும் மருத்துவப் பணிகள் (அடுத்த 3)" : "UPCOMING MEDICAL TASKS (NEXT 3)"}
         </Text>
 
         {schedules.slice(0, 3).map((v, i) => (
@@ -2275,7 +2337,7 @@ export default function LivestockScreen() {
                       : v.category === "MEDICATION"
                         ? "💊 "
                         : "🩺 "}
-                    {v.category}
+                    {translateCategory(v.category, isTamil)}
                   </Text>
                 </View>
               )}
@@ -2287,7 +2349,7 @@ export default function LivestockScreen() {
                   marginBottom: 2,
                 }}
               >
-                {v.name}
+                {translateScheduleName(v.name, isTamil)}
               </Text>
               <Text
                 style={{
@@ -2296,7 +2358,7 @@ export default function LivestockScreen() {
                   color: "#555555",
                 }}
               >
-                {v.intervalDays} {t("Day Cycle")}
+                {v.intervalDays} {isTamil ? "நாள் சுழற்சி" : "Day Cycle"}
               </Text>
             </View>
             <View
@@ -2314,7 +2376,7 @@ export default function LivestockScreen() {
                   marginBottom: 4,
                 }}
               >
-                {v.dateStr}
+                {translateDateStr(v.dateStr, isTamil)}
               </Text>
               <View
                 style={{
@@ -2357,7 +2419,7 @@ export default function LivestockScreen() {
               letterSpacing: 0.5,
             }}
           >
-            {t("GENERATE AI HUSBANDRY ROUTINE")}
+            {isTamil ? "AI பராமரிப்பு வழக்கத்தை உருவாக்கு" : "GENERATE AI HUSBANDRY ROUTINE"}
           </Text>
         </TouchableOpacity>
 
@@ -2380,7 +2442,7 @@ export default function LivestockScreen() {
               letterSpacing: 0.5,
             }}
           >
-            {t("VIEW FULL MEDICAL LEDGER")}
+            {isTamil ? "முழு மருத்துவ பதிவேட்டை பார்க்க" : "VIEW FULL MEDICAL LEDGER"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -2421,7 +2483,7 @@ export default function LivestockScreen() {
               color: "#0f0f0f",
             }}
           >
-            {t("AI Symptom Checker")}
+            {isTamil ? "AI அறிகுறி சரிபார்ப்பான்" : "AI Symptom Checker"}
           </Text>
         </View>
 
@@ -2433,7 +2495,7 @@ export default function LivestockScreen() {
             fontFamily: "Inter_500Medium",
           }}
         >
-          {t(`Select symptoms observed in the ${animalType}:`)}
+          {isTamil ? `${ANIMAL_NAMES_TA[animalType] || animalType}இல் காணப்பட்ட அறிகுறிகளைத் தேர்ந்தெடுக்கவும்:` : `Select symptoms observed in the ${animalType}:`}
         </Text>
 
         <View
@@ -2461,7 +2523,7 @@ export default function LivestockScreen() {
                     fontSize: 13,
                   }}
                 >
-                  {t(s)}
+                  {isTamil ? (SYMPTOM_NAMES_TA[s] || s) : s}
                 </Text>
               </TouchableOpacity>
             );
@@ -2527,7 +2589,7 @@ export default function LivestockScreen() {
               fontFamily: "Inter_500Medium",
               fontSize: 14,
             }}
-            placeholder={t("Add notes (optional)")}
+            placeholder={isTamil ? "குறிப்புகளைச் சேர்க்கவும் (விருப்பத்தேர்வு)" : "Add notes (optional)"}
             value={caption}
             onChangeText={setCaption}
           />
@@ -2557,7 +2619,7 @@ export default function LivestockScreen() {
               letterSpacing: 0.5,
             }}
           >
-            {t("ANALYZE SYMPTOMS")}
+            {isTamil ? "அறிகுறிகளை பகுப்பாய்வு செய்" : "ANALYZE SYMPTOMS"}
           </Text>
         </TouchableOpacity>
 
@@ -2598,7 +2660,7 @@ export default function LivestockScreen() {
                     color: "#6366f1",
                   }}
                 >
-                  {diagnosis.confidenceScore}% {t("Confidence Match")}
+                  {diagnosis.confidenceScore}% {isTamil ? "பொருத்தம்" : "Confidence Match"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -2638,7 +2700,7 @@ export default function LivestockScreen() {
                   marginBottom: 8,
                 }}
               >
-                {t("Action Plan")}:
+                {isTamil ? "செயல்திட்டம்" : "Action Plan"}:
               </Text>
               {diagnosis.actionPlan?.map((step: string, i: number) => (
                 <Text
@@ -2696,7 +2758,7 @@ export default function LivestockScreen() {
                     color: "#111827",
                   }}
                 >
-                  {t("Medical Ledger")}
+                  {isTamil ? "மருத்துவ பதிவேடு" : "Medical Ledger"}
                 </Text>
                 <Text
                   style={{
@@ -2706,7 +2768,7 @@ export default function LivestockScreen() {
                     marginTop: 2,
                   }}
                 >
-                  {t("Standard (MSP) Protocols & Timeline")}
+                  {isTamil ? "நிலையான (MSP) வழிகாட்டு நெறிமுறைகள்" : "Standard (MSP) Protocols & Timeline"}
                 </Text>
               </View>
               <TouchableOpacity
@@ -2747,7 +2809,7 @@ export default function LivestockScreen() {
                           marginBottom: 8,
                         }}
                       >
-                        {item.status.toUpperCase()} • {item.dateStr}
+                        {(item.status === "Overdue" ? (isTamil ? "தாமதம்" : "OVERDUE") : item.status === "Completed" ? (isTamil ? "முடிந்தது" : "COMPLETED") : (isTamil ? "வரவிருப்பது" : "UPCOMING"))} • {translateDateStr(item.dateStr, isTamil)}
                       </Text>
                       <Text
                         style={{
@@ -2758,7 +2820,7 @@ export default function LivestockScreen() {
                           lineHeight: 28,
                         }}
                       >
-                        {item.name}
+                        {translateScheduleName(item.name, isTamil)}
                       </Text>
                       <View
                         style={{
@@ -2779,7 +2841,7 @@ export default function LivestockScreen() {
                             fontFamily: "Inter_400Regular",
                           }}
                         >
-                          {t("Cycle")}: {item.intervalDays} {t("days")}
+                          {isTamil ? "சுழற்சி" : "Cycle"}: {item.intervalDays} {isTamil ? "நாட்கள்" : "days"}
                         </Text>
                       </View>
                       <Text
@@ -2789,7 +2851,7 @@ export default function LivestockScreen() {
                           fontSize: 14,
                         }}
                       >
-                        {t("Follow Protocol")}
+                        {isTamil ? "நெறிமுறையைப் பின்பற்றவும்" : "Follow Protocol"}
                       </Text>
                     </View>
 
@@ -2817,7 +2879,7 @@ export default function LivestockScreen() {
                             fontSize: 13,
                           }}
                         >
-                          {t("MARK DONE")}
+                          {isTamil ? "முடிந்தது என குறிக்கவும்" : "MARK DONE"}
                         </Text>
                       </TouchableOpacity>
                     ) : (
@@ -2843,7 +2905,7 @@ export default function LivestockScreen() {
                             fontSize: 13,
                           }}
                         >
-                          {t("COMPLETED")}
+                          {isTamil ? "முடிந்தது" : "COMPLETED"}
                         </Text>
                       </View>
                     )}
@@ -2874,15 +2936,15 @@ export default function LivestockScreen() {
                                 : selectedTask.category === "MEDICATION"
                                   ? "💊 "
                                   : "🩺 "}
-                              {selectedTask.category}
+                              {translateCategory(selectedTask.category, isTamil)}
                             </Text>
                           </View>
                         )}
                         <Text className="text-2xl font-bold text-ink">
-                          {selectedTask?.name}
+                          {translateScheduleName(selectedTask?.name, isTamil)}
                         </Text>
                         <Text className="text-orange-500 font-bold mt-1">
-                          {selectedTask?.dateStr}
+                          {translateDateStr(selectedTask?.dateStr, isTamil)}
                         </Text>
                       </View>
                       <TouchableOpacity
@@ -2900,42 +2962,38 @@ export default function LivestockScreen() {
                       {/* Why This Matters */}
                       <View className="bg-white p-4 rounded-2xl border border-ink/5 mb-4 shadow-sm">
                         <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
-                          Why This Matters
+                          {isTamil ? "இது ஏன் முக்கியம்" : "Why This Matters"}
                         </Text>
                         <Text className="text-ink font-inter leading-relaxed">
-                          {selectedTask?.whyItMatters ||
-                            "Standard protocol for this herd."}
+                          {translateMedicalDetail(selectedTask?.whyItMatters || "Standard protocol for this herd.", isTamil)}
                         </Text>
                       </View>
 
                       {/* Schedule Math (Why Today?) */}
                       <View className="bg-white p-4 rounded-2xl border border-ink/5 mb-4 shadow-sm">
                         <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
-                          Why This Date?
+                          {isTamil ? "இந்த தேதி ஏன்?" : "Why This Date?"}
                         </Text>
                         <Text className="text-ink font-inter leading-relaxed">
-                          {selectedTask?.scheduleMath ||
-                            `Based on a ${selectedTask?.intervalDays || 30}-day repeating cycle.`}
+                          {translateMedicalDetail(selectedTask?.scheduleMath || `Based on a ${selectedTask?.intervalDays || 30}-day repeating cycle.`, isTamil)}
                         </Text>
                       </View>
 
                       {/* Dosage and Safety */}
                       <View className="bg-white p-4 rounded-2xl border border-ink/5 mb-4 shadow-sm">
                         <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
-                          Dosage & Administration
+                          {isTamil ? "அளவு & பயன்பாட்டு முறை" : "Dosage & Administration"}
                         </Text>
                         <Text className="text-ink font-inter leading-relaxed font-semibold">
-                          {selectedTask?.dosage ||
-                            "Follow veterinary instructions."}
+                          {translateMedicalDetail(selectedTask?.dosage || "Follow veterinary instructions.", isTamil)}
                         </Text>
 
                         <View className="mt-4 pt-4 border-t border-ink/5">
                           <Text className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2">
-                            Safety Warnings
+                            {isTamil ? "பாதுகாப்பு எச்சரிக்கைகள்" : "Safety Warnings"}
                           </Text>
                           <Text className="text-ink font-inter leading-relaxed text-orange-700">
-                            {selectedTask?.warnings ||
-                              "No specific warnings listed."}
+                            {translateMedicalDetail(selectedTask?.warnings || "No specific warnings listed.", isTamil)}
                           </Text>
                         </View>
                       </View>
@@ -2946,7 +3004,7 @@ export default function LivestockScreen() {
                       className="bg-farm-green h-14 rounded-full items-center justify-center shadow-lg"
                     >
                       <Text className="text-white font-bold text-lg">
-                        Mark as Understood
+                        {isTamil ? "புரிந்து கொள்ளப்பட்டது" : "Mark as Understood"}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -2971,7 +3029,7 @@ export default function LivestockScreen() {
           >
             <View className="flex-row justify-between items-center mb-6">
               <Text className="text-xl font-black text-ink">
-                {t("AI Cooling Protocol")}
+                {isTamil ? "AI குளிர்விப்பு வழிகாட்டுதல்" : "AI Cooling Protocol"}
               </Text>
               <TouchableOpacity
                 onPress={() => setShowHeatStressModal(false)}
@@ -2985,10 +3043,7 @@ export default function LivestockScreen() {
               <View className="flex-1 items-center justify-center">
                 <ActivityIndicator size="large" color="#ea580c" />
                 <Text className="text-ink-muted mt-4 font-semibold text-center px-8">
-                  {t(
-                    "Gemini AI is analyzing THI and generating a specialized protocol for",
-                  )}{" "}
-                  {t(animalType)}...
+                  {isTamil ? `THI நிலையை பகுப்பாய்வு செய்து ${ANIMAL_NAMES_TA[animalType] || animalType}க்கான வழிகாட்டுதல் உருவாக்கப்படுகிறது...` : `Gemini AI is analyzing THI and generating a specialized protocol for ${animalType}...`}
                 </Text>
               </View>
             ) : heatStressData ? (
@@ -2998,7 +3053,7 @@ export default function LivestockScreen() {
                   style={{ backgroundColor: "#ffedd5" }}
                 >
                   <Text className="text-orange-800 font-bold mb-2 uppercase text-xs tracking-wider">
-                    {t("Risk Analysis")}
+                    {isTamil ? "ஆபத்து பகுப்பாய்வு" : "Risk Analysis"}
                   </Text>
                   <Text className="text-orange-900 font-medium leading-relaxed">
                     {heatStressData.summary}
@@ -3006,7 +3061,7 @@ export default function LivestockScreen() {
                 </View>
 
                 <Text className="text-ink font-black text-lg mb-3 mt-2">
-                  {t("Immediate Actions")}
+                  {isTamil ? "உடனடி நடவடிக்கைகள்" : "Immediate Actions"}
                 </Text>
                 {heatStressData.immediateActions?.map(
                   (action: string, i: number) => (
@@ -3027,7 +3082,7 @@ export default function LivestockScreen() {
                 )}
 
                 <Text className="text-ink font-black text-lg mb-3 mt-4">
-                  {t("Preventative Measures")}
+                  {isTamil ? "தடுப்பு முறைகள்" : "Preventative Measures"}
                 </Text>
                 {heatStressData.preventativeMeasures?.map(
                   (measure: string, i: number) => (
@@ -3050,7 +3105,7 @@ export default function LivestockScreen() {
                   className="bg-orange-500 p-4 rounded-xl items-center mt-4 mb-8"
                 >
                   <Text className="text-white font-bold text-base">
-                    {t("Acknowledge Protocol")}
+                    {isTamil ? "ஏற்றுக்கொள்ளப்பட்டது" : "Acknowledge Protocol"}
                   </Text>
                 </TouchableOpacity>
               </ScrollView>
@@ -3084,7 +3139,7 @@ export default function LivestockScreen() {
               marginBottom: 16,
             }}
           >
-            {t("EMERGENCY ALERT")}
+            {isTamil ? "அவசர எச்சரிக்கை" : "EMERGENCY ALERT"}
           </Text>
           <Text
             style={{
@@ -3095,9 +3150,7 @@ export default function LivestockScreen() {
               marginBottom: 32,
             }}
           >
-            {t(
-              "High Contagion Disease Detected. Immediate Isolation Required.",
-            )}
+            {isTamil ? "அதிவேகமாக பரவும் நோய் கண்டறியப்பட்டது. உடனடியாக தனிமைப்படுத்தவும்." : "High Contagion Disease Detected. Immediate Isolation Required."}
           </Text>
           <TouchableOpacity
             onPress={() => setIsEmergency(false)}
@@ -3115,7 +3168,7 @@ export default function LivestockScreen() {
                 fontSize: 16,
               }}
             >
-              {t("ACKNOWLEDGE & DISMISS")}
+              {isTamil ? "புரிந்து கொண்டேன் & நீக்குக" : "ACKNOWLEDGE & DISMISS"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -3154,7 +3207,7 @@ export default function LivestockScreen() {
               textTransform: "uppercase",
             }}
           >
-            {t("LIVESTOCK CONDITIONS")}
+            {isTamil ? "கால்நடை வானிலை சூழல்" : "LIVESTOCK CONDITIONS"}
           </Text>
         </View>
 
@@ -3178,7 +3231,7 @@ export default function LivestockScreen() {
                 marginTop: 2,
               }}
             >
-              {t("Humidity")} {currentHumidity}%
+              {isTamil ? "ஈரப்பதம்" : "Humidity"} {currentHumidity}%
             </Text>
           </View>
 
@@ -3212,10 +3265,10 @@ export default function LivestockScreen() {
                 }}
               >
                 {thiScore >= 80
-                  ? "🔴 SEVERE STRESS"
+                  ? (isTamil ? "🔴 கடுமையான வெப்ப அழுத்தம்" : "🔴 SEVERE STRESS")
                   : thiScore >= 72
-                    ? "🟠 HEAT-STRESS"
-                    : "🟢 OPTIMAL"}
+                    ? (isTamil ? "🟠 மிதமான வெப்ப அழுத்தம்" : "🟠 HEAT-STRESS")
+                    : (isTamil ? "🟢 உகந்த சூழல்" : "🟢 OPTIMAL")}
               </Text>
             </View>
             <Text
@@ -3227,10 +3280,10 @@ export default function LivestockScreen() {
               }}
             >
               {thiScore >= 80
-                ? t("Immediate cooling required for cattle.")
+                ? (isTamil ? "கால்நடைகளுக்கு உடனடி குளிர்விப்பு தேவை." : "Immediate cooling required for cattle.")
                 : thiScore >= 72
-                  ? t("Cattle may require closer monitoring today.")
-                  : t("Conditions are comfortable for the herd.")}
+                  ? (isTamil ? "இன்று கால்நடைகளை உன்னிப்பாக கண்காணிக்கவும்." : "Cattle may require closer monitoring today.")
+                  : (isTamil ? "மந்தைக்கு சாதகமான சூழல் நிலவுகிறது." : "Conditions are comfortable for the herd.")}
             </Text>
           </View>
         </View>
@@ -3264,7 +3317,7 @@ export default function LivestockScreen() {
               <Text
                 style={{ color: "#334155", fontSize: 13, fontWeight: "600" }}
               >
-                {t("Check drinking water")}
+                {isTamil ? "குடிநீரை சரிபார்க்கவும்" : "Check drinking water"}
               </Text>
             </View>
             <View
@@ -3287,7 +3340,7 @@ export default function LivestockScreen() {
               <Text
                 style={{ color: "#334155", fontSize: 13, fontWeight: "600" }}
               >
-                {t("Check shade/ventilation")}
+                {isTamil ? "நிழல் மற்றும் காற்றோட்டத்தை சரிபார்க்கவும்" : "Check shade/ventilation"}
               </Text>
             </View>
             <View
@@ -3310,7 +3363,7 @@ export default function LivestockScreen() {
               <Text
                 style={{ color: "#334155", fontSize: 13, fontWeight: "600" }}
               >
-                {t("Avoid unnecessary handling")}
+                {isTamil ? "தேவையற்ற அசைவுகளை தவிர்க்கவும்" : "Avoid unnecessary handling"}
               </Text>
             </View>
             <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -3327,7 +3380,7 @@ export default function LivestockScreen() {
               <Text
                 style={{ color: "#334155", fontSize: 13, fontWeight: "600" }}
               >
-                {t("Monitor animals for signs of distress")}
+                {isTamil ? "விலங்குகளின் சோர்வு அறிகுறிகளை கண்காணிக்கவும்" : "Monitor animals for signs of distress"}
               </Text>
             </View>
           </View>
@@ -3347,7 +3400,7 @@ export default function LivestockScreen() {
             <Text
               style={{ color: "#0ea5e9", fontWeight: "bold", fontSize: 14 }}
             >
-              ✨ {t("Generate AI Plan")}
+              ✨ {isTamil ? "AI திட்டத்தை உருவாக்கு" : "Generate AI Plan"}
             </Text>
           </TouchableOpacity>
 
@@ -3366,7 +3419,7 @@ export default function LivestockScreen() {
               <Text
                 style={{ color: "#ffffff", fontWeight: "bold", fontSize: 12 }}
               >
-                + {t("Add to Routine")}
+                + {isTamil ? "வழக்கத்தில் சேர்க்க" : "Add to Routine"}
               </Text>
             </TouchableOpacity>
           )}
@@ -3381,10 +3434,10 @@ export default function LivestockScreen() {
           </View>
           <View className="flex-1">
             <Text className="font-black text-ink text-[16px] tracking-tight">
-              {t("SCAN RECORD")}
+              {isTamil ? "பதிவை ஸ்கேன் செய்" : "SCAN RECORD"}
             </Text>
             <Text className="text-ink-muted text-xs font-semibold">
-              {t("Upload vet bills, vaccine cards, etc.")}
+              {isTamil ? "மருத்துவ ரசீதுகள், தடுப்பூசி அட்டைகளை பதிவேற்றவும்" : "Upload vet bills, vaccine cards, etc."}
             </Text>
           </View>
         </View>
@@ -3417,7 +3470,7 @@ export default function LivestockScreen() {
                 marginLeft: 8,
               }}
             >
-              {t("Scan")}
+              {isTamil ? "ஸ்கேன் செய்" : "Scan"}
             </Text>
           </TouchableOpacity>
 
@@ -3444,7 +3497,7 @@ export default function LivestockScreen() {
             <Text
               style={{ color: "#3b82f6", fontWeight: "bold", fontSize: 14 }}
             >
-              {t("Upload Gallery")}
+              {isTamil ? "கேலரியில் இருந்து பதிவேற்று" : "Upload Gallery"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -3465,14 +3518,14 @@ export default function LivestockScreen() {
             style={{ maxWidth: 448 }}
           >
             <Text className="text-lg font-black text-ink mb-4">
-              {t("Detected Information")}
+              {isTamil ? "கண்டறியப்பட்ட தகவல்கள்" : "Detected Information"}
             </Text>
 
             {isScanningRecord ? (
               <View className="items-center justify-center py-8">
                 <ActivityIndicator size="large" color="#3b82f6" />
                 <Text className="text-ink-muted font-bold text-sm mt-4">
-                  {t("AI is reading your document...")}
+                  {isTamil ? "AI உங்கள் ஆவணத்தை படிக்கிறது..." : "AI is reading your document..."}
                 </Text>
               </View>
             ) : (
@@ -3480,7 +3533,7 @@ export default function LivestockScreen() {
                 <View className="bg-ink/5 rounded-xl p-4 mb-4">
                   <View className="flex-row justify-between mb-2">
                     <Text className="text-ink-muted font-semibold text-xs">
-                      {t("Animal:")}
+                      {isTamil ? "விலங்கு:" : "Animal:"}
                     </Text>
                     <Text className="text-ink font-black text-xs">
                       {scannedRecord?.animalId}
@@ -3488,7 +3541,7 @@ export default function LivestockScreen() {
                   </View>
                   <View className="flex-row justify-between mb-2">
                     <Text className="text-ink-muted font-semibold text-xs">
-                      {t("Record:")}
+                      {isTamil ? "பதிவு:" : "Record:"}
                     </Text>
                     <Text className="text-ink font-black text-xs">
                       {scannedRecord?.recordType}
@@ -3496,7 +3549,7 @@ export default function LivestockScreen() {
                   </View>
                   <View className="flex-row justify-between mb-2">
                     <Text className="text-ink-muted font-semibold text-xs">
-                      {t("Date:")}
+                      {isTamil ? "தேதி:" : "Date:"}
                     </Text>
                     <Text className="text-ink font-black text-xs">
                       {scannedRecord?.date}
@@ -3504,7 +3557,7 @@ export default function LivestockScreen() {
                   </View>
                   <View className="flex-row justify-between">
                     <Text className="text-ink-muted font-semibold text-xs">
-                      {t("Next Due:")}
+                      {isTamil ? "அடுத்த தவணை:" : "Next Due:"}
                     </Text>
                     <Text className="text-orange-500 font-black text-xs">
                       {scannedRecord?.nextDue}
@@ -3515,7 +3568,7 @@ export default function LivestockScreen() {
                 {scannedRecord?.aiSuggestion && (
                   <View className="bg-blue-50 border border-blue-100 rounded-xl p-3 mb-4">
                     <Text className="text-blue-800 font-bold text-[10px] uppercase tracking-wider mb-1">
-                      ✨ AI Insight
+                      ✨ {isTamil ? "AI நுண்ணறிவு" : "AI Insight"}
                     </Text>
                     <Text className="text-blue-900 font-semibold text-xs leading-relaxed">
                       {scannedRecord.aiSuggestion}
@@ -3543,10 +3596,10 @@ export default function LivestockScreen() {
                     </View>
                     <View>
                       <Text className="text-ink font-bold text-sm">
-                        Add ₹{scannedRecord.amount} to Finance
+                        {isTamil ? `₹${scannedRecord.amount} நிதியில் சேர்க்க` : `Add ₹${scannedRecord.amount} to Finance`}
                       </Text>
                       <Text className="text-ink-muted text-[10px] font-semibold">
-                        Log expense automatically
+                        {isTamil ? "செலவை தானாக பதிவு செய்" : "Log expense automatically"}
                       </Text>
                     </View>
                   </TouchableOpacity>
@@ -3557,14 +3610,14 @@ export default function LivestockScreen() {
                     className="flex-1 bg-ink/5 py-3 rounded-xl items-center mr-2"
                     onPress={() => setShowScanModal(false)}
                   >
-                    <Text className="text-ink font-bold">{t("Cancel")}</Text>
+                    <Text className="text-ink font-bold">{isTamil ? "ரத்து செய்" : "Cancel"}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     className="flex-1 bg-farm-green py-3 rounded-xl items-center ml-2 shadow-sm"
                     onPress={handleSaveScannedRecord}
                   >
                     <Text className="text-white font-bold">
-                      {t("Confirm & Save")}
+                      {isTamil ? "உறுதி செய்து சேமி" : "Confirm & Save"}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -3600,15 +3653,15 @@ export default function LivestockScreen() {
                         : selectedTask.category === "MEDICATION"
                           ? "💊 "
                           : "🩺 "}
-                      {selectedTask.category}
+                      {translateCategory(selectedTask.category, isTamil)}
                     </Text>
                   </View>
                 )}
                 <Text className="text-2xl font-bold text-ink">
-                  {selectedTask?.name}
+                  {translateScheduleName(selectedTask?.name, isTamil)}
                 </Text>
                 <Text className="text-orange-500 font-bold mt-1">
-                  {selectedTask?.dateStr}
+                  {translateDateStr(selectedTask?.dateStr, isTamil)}
                 </Text>
               </View>
               <TouchableOpacity
@@ -3626,40 +3679,38 @@ export default function LivestockScreen() {
               {/* Why This Matters */}
               <View className="bg-white p-4 rounded-2xl border border-ink/5 mb-4 shadow-sm">
                 <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
-                  Why This Matters
+                  {isTamil ? "இது ஏன் முக்கியம்" : "Why This Matters"}
                 </Text>
                 <Text className="text-ink font-inter leading-relaxed">
-                  {selectedTask?.whyItMatters ||
-                    "Standard protocol for this herd."}
+                  {translateMedicalDetail(selectedTask?.whyItMatters || "Standard protocol for this herd.", isTamil)}
                 </Text>
               </View>
 
               {/* Schedule Math (Why Today?) */}
               <View className="bg-white p-4 rounded-2xl border border-ink/5 mb-4 shadow-sm">
                 <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
-                  Why This Date?
+                  {isTamil ? "இந்த தேதி ஏன்?" : "Why This Date?"}
                 </Text>
                 <Text className="text-ink font-inter leading-relaxed">
-                  {selectedTask?.scheduleMath ||
-                    `Based on a ${selectedTask?.intervalDays || 30}-day repeating cycle.`}
+                  {translateMedicalDetail(selectedTask?.scheduleMath || `Based on a ${selectedTask?.intervalDays || 30}-day repeating cycle.`, isTamil)}
                 </Text>
               </View>
 
               {/* Dosage and Safety */}
               <View className="bg-white p-4 rounded-2xl border border-ink/5 mb-4 shadow-sm">
                 <Text className="text-xs font-bold text-ink-muted uppercase tracking-wider mb-2">
-                  Dosage & Administration
+                  {isTamil ? "அளவு & பயன்பாட்டு முறை" : "Dosage & Administration"}
                 </Text>
                 <Text className="text-ink font-inter leading-relaxed font-semibold">
-                  {selectedTask?.dosage || "Follow veterinary instructions."}
+                  {translateMedicalDetail(selectedTask?.dosage || "Follow veterinary instructions.", isTamil)}
                 </Text>
 
                 <View className="mt-4 pt-4 border-t border-ink/5">
                   <Text className="text-xs font-bold text-orange-500 uppercase tracking-wider mb-2">
-                    Safety Warnings
+                    {isTamil ? "பாதுகாப்பு எச்சரிக்கைகள்" : "Safety Warnings"}
                   </Text>
                   <Text className="text-ink font-inter leading-relaxed text-orange-700">
-                    {selectedTask?.warnings || "No specific warnings listed."}
+                    {translateMedicalDetail(selectedTask?.warnings || "No specific warnings listed.", isTamil)}
                   </Text>
                 </View>
               </View>
@@ -3670,7 +3721,7 @@ export default function LivestockScreen() {
               className="bg-farm-green h-14 rounded-full items-center justify-center shadow-lg"
             >
               <Text className="text-white font-bold text-lg">
-                Mark as Understood
+                {isTamil ? "புரிந்து கொள்ளப்பட்டது" : "Mark as Understood"}
               </Text>
             </TouchableOpacity>
           </View>
